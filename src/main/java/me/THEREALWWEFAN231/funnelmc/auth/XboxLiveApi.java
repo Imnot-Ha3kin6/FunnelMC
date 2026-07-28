@@ -77,6 +77,9 @@ public class XboxLiveApi {
 		}
 		body.add("users", users);
 		body.addProperty("onlineOnly", true);
+		// Without this, the API defaults to "user" level and omits devices/titles entirely, so
+		// every presence lookup would come back with nothing to match against Minecraft's title ID.
+		body.addProperty("level", "all");
 
 		JsonArray response = postForArray("https://userpresence.xboxlive.com/users/batch", authorizationHeader, "3", body);
 
