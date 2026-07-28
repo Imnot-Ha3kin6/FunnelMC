@@ -5,6 +5,8 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.cloudburstmc.protocol.bedrock.data.GameRuleData;
 import org.cloudburstmc.protocol.bedrock.data.GameType;
 import org.cloudburstmc.protocol.bedrock.packet.RequestChunkRadiusPacket;
@@ -32,11 +34,15 @@ import net.minecraft.world.phys.Vec3;
 
 public class StartGameTranslator extends PacketTranslator<StartGamePacket> {
 
+	private static final Logger logger = LogManager.getLogger(StartGameTranslator.class);
+
 	public static int lastRunTimeId;//TODO: remove this, or at least move to some class accessible from the Client class, thinking of setting the player id to this, but not sure about that yet
 	public static GameType DEFAULT_GAME_TYPE;
 
 	@Override
 	public void translate(StartGamePacket packet) {
+		logger.warn("StartGamePacket received, dimension={} playerPos={}", packet.getDimensionId(), packet.getPlayerPosition());
+
 		// itemDefinitions/blockDefinitions are set synchronously in ClientBatchHandler, not here -
 		// see its comment for why this deferred-to-main-thread translate() is too late for that.
 		Client.instance.movementMode = packet.getAuthoritativeMovementMode();
@@ -84,6 +90,7 @@ public class StartGameTranslator extends PacketTranslator<StartGamePacket> {
 		// advances the tracker past its initial state.
 		Client.instance.javaConnection.processServerToClientPacket(
 				new ClientboundGameEventPacket(ClientboundGameEventPacket.LEVEL_CHUNKS_LOAD_START, 0));
+		logger.warn("Sent LEVEL_CHUNKS_LOAD_START");
 
 		//TODO send a complete tag sync packet - that way water can work
 
@@ -97,11 +104,13 @@ public class StartGameTranslator extends PacketTranslator<StartGamePacket> {
 		PositionMoveRotation positionMoveRotation = new PositionMoveRotation(new Vec3(x, y, z), Vec3.ZERO, yaw, pitch);
 		ClientboundPlayerPositionPacket clientboundPlayerPositionPacket = new ClientboundPlayerPositionPacket(0, positionMoveRotation, Collections.<Relative>emptySet());
 		Client.instance.javaConnection.processServerToClientPacket(clientboundPlayerPositionPacket);
+		logger.warn("Sent player position x={} y={} z={}", x, y, z);
 
 		int chunkX = Mth.floor(x) >> 4;
 		int chunkZ = Mth.floor(z) >> 4;
 		ClientboundSetChunkCacheCenterPacket clientboundSetChunkCacheCenterPacket = new ClientboundSetChunkCacheCenterPacket(chunkX, chunkZ);
 		Client.instance.javaConnection.processServerToClientPacket(clientboundSetChunkCacheCenterPacket);
+		logger.warn("Sent chunk cache center chunkX={} chunkZ={}", chunkX, chunkZ);
 
 		// Boilerplate initialization stuff
 		RequestChunkRadiusPacket requestChunkRadiusPacket = new RequestChunkRadiusPacket();

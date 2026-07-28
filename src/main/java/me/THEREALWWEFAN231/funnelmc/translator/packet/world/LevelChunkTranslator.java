@@ -2,6 +2,8 @@ package me.THEREALWWEFAN231.funnelmc.translator.packet.world;
 
 import com.darkmagician6.eventapi.EventManager;
 import com.darkmagician6.eventapi.EventTarget;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.cloudburstmc.nbt.NBTInputStream;
 import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.nbt.NbtMapBuilder;
@@ -33,6 +35,8 @@ import java.util.BitSet;
 import java.util.List;
 
 public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
+
+	private final Logger logger = LogManager.getLogger(LevelChunkTranslator.class);
 
 	private final List<LevelChunkPacket> chunksOutOfRenderDistance = new ArrayList<>();
 
@@ -183,6 +187,10 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 		ClientboundLevelChunkWithLightPacket chunkDeltaUpdateS2CPacket = new ClientboundLevelChunkWithLightPacket(
 				worldChunk, FunnelMC.mc.level.getLightEngine(), new BitSet(), new BitSet());
 		Client.instance.javaConnection.processServerToClientPacket(chunkDeltaUpdateS2CPacket);
+
+		this.logger.warn("Translated+sent chunk ({}, {}): bedrock subChunksLength={}, java worldChunk sections={} (level minY={}, height={})",
+				chunkX, chunkZ, packet.getSubChunksLength(), sections.length,
+				FunnelMC.mc.level.getMinY(), FunnelMC.mc.level.getHeight());
 	}
 
 	/**
