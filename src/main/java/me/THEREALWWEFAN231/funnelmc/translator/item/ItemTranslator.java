@@ -63,15 +63,15 @@ public class ItemTranslator {
 	//TODO: tags and what ever
 	public static ItemStack itemDataToItemStack(ItemData itemData) {
 
-		int damage = 0;
-		if (itemData.getTag() != null) {
-			damage = itemData.getTag().getInt("Damage");
-		}
-
-		//keep the short cast, the server can send us non short numbers that, "need to be rolled over" to their correct id
-		// TODO: modern Bedrock items are identified via ItemDefinition (runtime id negotiated per
-		// session), not a fixed legacy numeric id - getRuntimeId() here is a stand-in.
-		ItemStack itemStack = new ItemStack(BEDROCK_ITEM_INFO_TO_JAVA_ITEM.get((short) itemData.getDefinition().getRuntimeId() + ":" + damage));
+		// The legacy BEDROCK_ITEM_INFO_TO_JAVA_ITEM table is keyed by a fixed numeric bedrock_id, but
+		// modern Bedrock items are identified via ItemDefinition with a runtime id negotiated per
+		// session - that numeric id no longer lines up with anything in geyser/items.json, so it was
+		// always a near-guaranteed lookup miss (returning null, then crashing the ItemStack
+		// constructor). Most item identifiers match directly between editions, so look up by the
+		// definition's identifier instead - BuiltInRegistries.ITEM falls back to Items.AIR for an
+		// unmatched identifier rather than returning null (see the same pattern in ItemTranslator#load).
+		Item item = BuiltInRegistries.ITEM.getValue(Identifier.parse(itemData.getDefinition().getIdentifier()));
+		ItemStack itemStack = new ItemStack(item);
 		itemStack.setCount(itemData.getCount());
 
 		if (itemData.getTag() != null) {
