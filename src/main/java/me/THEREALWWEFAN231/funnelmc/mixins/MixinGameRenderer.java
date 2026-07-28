@@ -8,20 +8,22 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import me.THEREALWWEFAN231.funnelmc.FunnelMC;
 import me.THEREALWWEFAN231.funnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.funnelmc.utils.ScaffoldPlace;
-import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.GameRenderer;
 
-// The crosshair/targeted-entity raycast used to be computed in GameRenderer#updateTargetedEntity,
-// but that method no longer exists in modern MC - the hitResult/crosshairPickEntity fields moved
-// onto Minecraft itself, computed by the private Minecraft#pick(float) method.
-@Mixin(Minecraft.class)
+@Mixin(GameRenderer.class)
 public class MixinGameRenderer {
-
-	@Inject(method = "pick", at = @At("RETURN"))
-	public void pick(float tickDelta, CallbackInfo callbackInfo) {
-		if (FunnelMC.mc.getCameraEntity() == null || !Client.instance.isConnectionOpen()) {
+	
+	/*@Inject(method = "updateTargetedEntity", at = @At(value = "INVOKE_ASSIGN", target = "Lnet/minecraft/entity/Entity;raycast(DFZ)Lnet/minecraft/util/hit/HitResult;"))
+	public void updateTargetedEntity(float tickDelta, CallbackInfo callbackInfo) {
+		ScaffoldPlace.setRaycastRsult();
+	}*/
+	
+	@Inject(method = "updateTargetedEntity", at = @At("RETURN"))
+	public void updateTargetedEntity(float tickDelta, CallbackInfo callbackInfo) {
+		if(FunnelMC.mc.getCameraEntity() == null || !Client.instance.isConnectionOpen()) {
 			return;
 		}
 		ScaffoldPlace.setRaycastResult();
 	}
-
+	
 }
