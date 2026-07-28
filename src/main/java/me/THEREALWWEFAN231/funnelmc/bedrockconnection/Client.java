@@ -150,6 +150,16 @@ public class Client {
 	public void onSessionInitialized(BedrockClientSession bedrockSession) {
 		this.bedrockSession = bedrockSession;
 
+		// Without this, quitting or crashing the game leaves the RakNet session dangling from the
+		// server's perspective until it times out server-side (tens of seconds) instead of dropping
+		// immediately - Geyser/Floodgate's duplicate-login guard then rejects the next connection
+		// attempt with "X is already logged in!" until that old session finally expires.
+		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+			if (bedrockSession.isConnected()) {
+				bedrockSession.disconnect();
+			}
+		}));
+
 		// Real Bedrock servers (including Geyser) expect this handshake before LoginPacket - it's
 		// how the server learns our protocol version and tells us what compression to use. Skipping
 		// straight to LoginPacket leaves the server's pre-negotiation pipeline treating us as an
