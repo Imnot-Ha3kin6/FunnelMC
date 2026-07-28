@@ -4,7 +4,6 @@
   "package": "me.THEREALWWEFAN231.funnelmc.mixins",
   "compatibilityLevel": "JAVA_25",
   "refmap": "funnelmc.refmap.json",
-  "refmap": "funnelmc.refmap.json",
   "client": [
     "MixinAbstractClientPlayerEntity",
     "MixinClientConnection",
