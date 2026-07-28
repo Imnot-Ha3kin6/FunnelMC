@@ -103,26 +103,24 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 			chunkSections[sectionIndex] = new LevelChunkSection(FunnelMC.mc.level.palettedContainerFactory());
 			int chunkVersion = byteBuf.readByte();
 
-			// Version 9 is the extended-height subchunk format (introduced alongside the -64..320
-			// world height range) - unlike version 8, sections aren't guaranteed contiguous from Y=0
-			// anymore, so the server prefixes each section with a signed Y index byte before the
-			// same storage-layer data version 8 uses. Not consuming that byte here was routing every
-			// version-9 section into manage0VersionChunk (the legacy PocketMine fixed-layout path,
-			// unrelated to this format), which reads a fixed 6144 bytes regardless of what's
-			// actually there - corrupting the read cursor for every section after it in the same
-			// packet, which is why the fallout showed up as wildly different-looking errors
-			// (garbage palette versions, buffer overruns, bad NBT tag types) across many chunks.
-			if (chunkVersion == 9) {
-				byteBuf.readByte(); // section Y index - unused here, sectionIndex already tracks position
-				chunkVersion = 8;
-			}
-
-			if (chunkVersion != 1 && chunkVersion != 8) {
+			if (chunkVersion != 1 && chunkVersion != 8 && chunkVersion != 9) {
 				manage0VersionChunk(byteBuf, chunkSections[sectionIndex]);
 				continue;
 			}
 
 			byte storageSize = chunkVersion == 1 ? 1 : byteBuf.readByte();
+
+			// Version 9 is the extended-height subchunk format (introduced alongside the -64..320
+			// world height range) - unlike version 8, sections aren't guaranteed contiguous from Y=0
+			// anymore, so the server appends a signed Y index byte AFTER the storage count, before
+			// the same storage-layer data version 8 uses. The Y index was previously read in the
+			// wrong position (right after the version byte, before storage count), which fed the
+			// Y index into storageSize and vice versa - a small/negative "storageSize" silently
+			// skipped the storage-layer loop entirely, leaving that section's real data unconsumed
+			// and corrupting the read cursor for every section after it in the same packet.
+			if (chunkVersion == 9) {
+				byteBuf.readByte(); // section Y index - unused here, sectionIndex already tracks position
+			}
 
 			for (int storageReadIndex = 0; storageReadIndex < storageSize; storageReadIndex++) {
 				// paletteHeader must be treated as unsigned here - readByte() gives a signed byte,
