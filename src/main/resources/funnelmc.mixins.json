@@ -8,6 +8,7 @@
   "client": [
     "MixinAbstractClientPlayerEntity",
     "MixinClientConnection",
+    "MixinClientPacketListenerTickDiag",
     "MixinClientPlayerEntity",
     "MixinGameRenderer",
     "MixinKeyboard",
