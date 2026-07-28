@@ -98,7 +98,13 @@ public class StartGameTranslator extends PacketTranslator<StartGamePacket> {
 		net.minecraft.client.Minecraft.getInstance().execute(() -> GameRulesChangedTranslator.onGameRulesChanged(packet.getGamerules()));
 
 		float x = packet.getPlayerPosition().getX();
-		float y = packet.getPlayerPosition().getY();
+		// Bedrock's player position is eye-height-based, but Java's is feet-based - every other
+		// player-position translation in this codebase accounts for this (MovePlayerPacketTranslator
+		// subtracts it going in, PlayerAuthInputSender adds it going out), but this initial spawn
+		// position sent the raw Bedrock Y straight through, spawning the player ~1.62 blocks above
+		// where they should be. Physics/corrections would then keep pulling them back down against
+		// that too-high baseline, which is what "rubberbanding in the sky" actually was.
+		float y = packet.getPlayerPosition().getY() - FunnelMC.mc.player.getEyeHeight(net.minecraft.world.entity.Pose.STANDING);
 		float z = packet.getPlayerPosition().getZ();
 		float yaw = packet.getRotation().getX();
 		float pitch = packet.getRotation().getY();

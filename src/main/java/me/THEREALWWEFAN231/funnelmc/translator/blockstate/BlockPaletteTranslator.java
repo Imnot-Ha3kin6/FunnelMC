@@ -37,6 +37,15 @@ public class BlockPaletteTranslator {
 	public static DefinitionRegistry<BlockDefinition> BLOCK_DEFINITIONS;
 
 	public static void loadMap(NbtList<NbtMap> blockPaletteData) {
+		// Runtime IDs are just this list's index order - they're only meaningful relative to whichever
+		// palette produced them, so stale entries from a previous loadMap() call (mod startup's bundled
+		// vanilla-only fallback, or a previous connection's server) have to be cleared before
+		// repopulating, otherwise a reconnect to a different server leaves old (now wrong) mappings
+		// mixed in with the new ones.
+		BEDROCK_BLOCK_STATE_TO_RUNTIME_ID.clear();
+		RUNTIME_ID_TO_BLOCK_STATE.clear();
+		BLOCK_STATE_TO_RUNTIME_ID.clear();
+
 		int runtimeId = 0;
 		SimpleDefinitionRegistry.Builder<BlockDefinition> blockDefinitionsBuilder = SimpleDefinitionRegistry.builder();
 		for (NbtMap nbtMap : blockPaletteData) {

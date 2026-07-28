@@ -72,6 +72,18 @@ public class ClientBatchHandler implements BedrockPacketHandler {
 			StartGamePacket startGamePacket = (StartGamePacket) packet;
 			Client.instance.bedrockSession.getPeer().getCodecHelper().setItemDefinitions(
 					SimpleDefinitionRegistry.<ItemDefinition>builder().addAll(startGamePacket.getItemDefinitions()).build());
+			// Runtime block IDs are just this server's block palette's index order, not a fixed vanilla
+			// constant - BlockStateTranslator.load() seeds these maps once at mod startup from a bundled
+			// vanilla-only snapshot so they're non-empty before any connection exists, but that's only
+			// ever correct by coincidence. Any server whose palette differs even slightly - a different
+			// protocol version's vanilla ordering, or (as with modded servers, e.g. behavior packs adding
+			// custom blocks) genuinely different content - desyncs every single block, which is why
+			// worlds could render as "completely wrong blocks" despite chunk translation itself being
+			// bug-free. StartGamePacket carries this exact server's actual palette; rebuilding from it
+			// here (synchronously, same as item definitions above and for the same reason - later
+			// packets on this Netty thread can decode before the deferred translate() below runs) makes
+			// every later block lookup match what this server actually sent.
+			BlockPaletteTranslator.loadMap(startGamePacket.getBlockPalette());
 			Client.instance.bedrockSession.getPeer().getCodecHelper().setBlockDefinitions(BlockPaletteTranslator.BLOCK_DEFINITIONS);
 		}
 
