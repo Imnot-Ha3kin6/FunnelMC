@@ -63,6 +63,13 @@ public class ItemTranslator {
 	//TODO: tags and what ever
 	public static ItemStack itemDataToItemStack(ItemData itemData) {
 
+		// An empty slot/no-item ItemData has no ItemDefinition at all (nothing to look up), unlike
+		// items that just failed to resolve to a known definition - treat it the same as Items.AIR
+		// instead of NPEing on getDefinition().getIdentifier().
+		if (itemData.getDefinition() == null) {
+			return ItemStack.EMPTY;
+		}
+
 		// The legacy BEDROCK_ITEM_INFO_TO_JAVA_ITEM table is keyed by a fixed numeric bedrock_id, but
 		// modern Bedrock items are identified via ItemDefinition with a runtime id negotiated per
 		// session - that numeric id no longer lines up with anything in geyser/items.json, so it was

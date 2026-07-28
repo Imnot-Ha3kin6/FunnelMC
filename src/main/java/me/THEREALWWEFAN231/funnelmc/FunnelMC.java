@@ -24,7 +24,7 @@ public class FunnelMC {
 	// Bumped by hand on every build sent to the tester - logged first thing on startup so a fresh
 	// funnelmc.log can always be checked against this string to confirm which jar actually produced
 	// it, instead of guessing from error line numbers whether an old build is still in use.
-	public static final String BUILD_ID = "chunk-v9-byte-order-fix-2026-07-28";
+	public static final String BUILD_ID = "null-blockstate-guard-2026-07-28";
 
 	public FileManagement fileManagement;
 	public PacketTranslatorManager packetTranslatorManager;

@@ -142,10 +142,12 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 					int[] singleValuePalette = readPalette(byteBuf, isRuntime, 1);
 					if (storageReadIndex == 0 && singleValuePalette[0] != BlockPaletteTranslator.AIR_BEDROCK_BLOCK_ID) {
 						BlockState blockState = BlockPaletteTranslator.RUNTIME_ID_TO_BLOCK_STATE.get(singleValuePalette[0]);
-						for (int x = 0; x < 16; x++) {
-							for (int z = 0; z < 16; z++) {
-								for (int y = 0; y < 16; y++) {
-									chunkSections[sectionIndex].setBlockState(x, y, z, blockState);
+						if (blockState != null) {
+							for (int x = 0; x < 16; x++) {
+								for (int z = 0; z < 16; z++) {
+									for (int y = 0; y < 16; y++) {
+										chunkSections[sectionIndex].setBlockState(x, y, z, blockState);
+									}
 								}
 							}
 						}
@@ -178,7 +180,13 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 
 									BlockState blockState = BlockPaletteTranslator.RUNTIME_ID_TO_BLOCK_STATE.get(mcbeBlockId);
 
-									chunkSections[sectionIndex].setBlockState(x, y, z, blockState);
+									// Bedrock block runtime IDs the palette translator hasn't mapped to a Java
+									// BlockState (e.g. blocks with no Java equivalent yet) come back null here -
+									// setBlockState() requires a non-null state, so leave the position as its
+									// section default (air) instead of crashing the whole chunk translation.
+									if (blockState != null) {
+										chunkSections[sectionIndex].setBlockState(x, y, z, blockState);
+									}
 								}
 								index++;
 							}
