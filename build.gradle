@@ -29,8 +29,18 @@ dependencies {
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
 	// Bedrock Edition protocol library, bundled directly into the mod jar via Loom's `include`.
+	// org.cloudburstmc.fastutil.* is excluded because it republishes the *same*
+	// it.unimi.dsi.fastutil package tree at an older version (8.5.15) than the one vanilla
+	// Minecraft already bundles (8.5.18) - having both on the classpath is a split-package
+	// version conflict (NoSuchMethodError on methods only present in 8.5.18, e.g.
+	// Int2ObjectMap#ofEntries), not a missing dependency. Excluding it lets everything fall back
+	// to Minecraft's own newer copy, which is a superset.
 	def bedrockProtocol = {
 		exclude group: 'io.netty'
+		exclude group: 'org.cloudburstmc.fastutil'
+		exclude group: 'org.cloudburstmc.fastutil.commons'
+		exclude group: 'org.cloudburstmc.fastutil.maps'
+		exclude group: 'org.cloudburstmc.fastutil.sets'
 	}
 	implementation "org.cloudburstmc.protocol:common:${project.cloudburst_protocol_version}", bedrockProtocol
 	include "org.cloudburstmc.protocol:common:${project.cloudburst_protocol_version}", bedrockProtocol
@@ -63,16 +73,6 @@ dependencies {
 		"net.jodah:expiringmap:0.5.10",
 		"io.airlift:aircompressor:0.27",
 		"com.nukkitx:natives:1.0.3",
-		"org.cloudburstmc.fastutil:core:8.5.15",
-		"org.cloudburstmc.fastutil.commons:int-common:8.5.15",
-		"org.cloudburstmc.fastutil.commons:long-common:8.5.15",
-		"org.cloudburstmc.fastutil.commons:object-common:8.5.15",
-		"org.cloudburstmc.fastutil.maps:int-object-maps:8.5.15",
-		"org.cloudburstmc.fastutil.maps:long-object-maps:8.5.15",
-		"org.cloudburstmc.fastutil.maps:object-int-maps:8.5.15",
-		"org.cloudburstmc.fastutil.sets:int-sets:8.5.15",
-		"org.cloudburstmc.fastutil.sets:long-sets:8.5.15",
-		"org.cloudburstmc.fastutil.sets:object-sets:8.5.15",
 		"com.fasterxml.jackson.core:jackson-annotations:2.18.0",
 	]
 	bedrockTransitives.each {
