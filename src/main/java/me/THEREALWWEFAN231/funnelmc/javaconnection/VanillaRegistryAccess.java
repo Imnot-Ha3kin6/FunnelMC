@@ -2,14 +2,16 @@ package me.THEREALWWEFAN231.funnelmc.javaconnection;
 
 import java.util.List;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.LayeredRegistryAccess;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.RegistryDataLoader;
 import net.minecraft.server.RegistryLayer;
-import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.server.packs.PackType;
+import net.minecraft.server.packs.repository.ServerPacksSource;
+import net.minecraft.server.packs.resources.CloseableResourceManager;
+import net.minecraft.server.packs.resources.MultiPackResourceManager;
 import net.minecraft.tags.TagLoader;
 
 // There's no real Java server here to send the registry-sync packets (ClientboundRegistryDataPacket)
@@ -30,9 +32,17 @@ import net.minecraft.tags.TagLoader;
 //
 // So this instead runs the same real JSON-registry-loading pipeline WorldLoader uses to build a
 // server's (or a singleplayer world's) registries at startup - RegistryDataLoader for elements plus
-// TagLoader for real tag bindings - just pointed at the client's own ResourceManager instead of a
-// server datapack. The client jar already bundles the same data/minecraft/... registry and tag JSON a
-// vanilla server would ship, since it needs it for singleplayer/LAN worlds anyway.
+// TagLoader for real tag bindings. It can't reuse Minecraft.getInstance().getResourceManager() for
+// this - that manager is a MultiPackResourceManager permanently constructed with PackType.CLIENT_RESOURCES,
+// so it only ever indexes each pack's assets/ paths and structurally can never see a data/minecraft/...
+// entry, no matter what's on the classpath. Registries without RegistryValidator.nonEmpty() (biome,
+// dimension_type, ...) silently come back empty through it instead of erroring, which is what let this
+// go unnoticed - the variant registries (cat_variant, wolf_variant, ...) are the only ones with that
+// validator, so they're the only ones that fail loudly with "Registry must be non-empty". The fix is
+// the same one WorldLoader.PackConfig.createResourceManager() uses server-side: build a resource manager
+// scoped to PackType.SERVER_DATA over the built-in vanilla pack instead, so data/minecraft/... is
+// actually visible. The client jar already bundles that data since it needs it for singleplayer/LAN
+// worlds anyway - ServerPacksSource.createVanillaPackSource() builds the same pack singleplayer uses.
 public class VanillaRegistryAccess {
 
 	private static RegistryAccess.Frozen instance;
@@ -45,24 +55,25 @@ public class VanillaRegistryAccess {
 	}
 
 	private static RegistryAccess.Frozen build() {
-		ResourceManager resourceManager = Minecraft.getInstance().getResourceManager();
+		try (CloseableResourceManager resourceManager = new MultiPackResourceManager(PackType.SERVER_DATA,
+				List.of(ServerPacksSource.createVanillaPackSource()))) {
+			LayeredRegistryAccess<RegistryLayer> layers = RegistryLayer.createRegistryAccess();
+			List<Registry.PendingTags<?>> staticTags = TagLoader.loadTagsForExistingRegistries(resourceManager, layers.getLayer(RegistryLayer.STATIC));
 
-		LayeredRegistryAccess<RegistryLayer> layers = RegistryLayer.createRegistryAccess();
-		List<Registry.PendingTags<?>> staticTags = TagLoader.loadTagsForExistingRegistries(resourceManager, layers.getLayer(RegistryLayer.STATIC));
+			RegistryAccess.Frozen worldgenLoadContext = layers.getAccessForLoading(RegistryLayer.WORLDGEN);
+			List<HolderLookup.RegistryLookup<?>> worldgenContextRegistries = TagLoader.buildUpdatedLookups(worldgenLoadContext, staticTags);
 
-		RegistryAccess.Frozen worldgenLoadContext = layers.getAccessForLoading(RegistryLayer.WORLDGEN);
-		List<HolderLookup.RegistryLookup<?>> worldgenContextRegistries = TagLoader.buildUpdatedLookups(worldgenLoadContext, staticTags);
+			RegistryAccess.Frozen worldgenRegistries = RegistryDataLoader
+					.load(resourceManager, worldgenContextRegistries, RegistryDataLoader.WORLDGEN_REGISTRIES, Runnable::run)
+					.join();
 
-		RegistryAccess.Frozen worldgenRegistries = RegistryDataLoader
-				.load(resourceManager, worldgenContextRegistries, RegistryDataLoader.WORLDGEN_REGISTRIES, Runnable::run)
-				.join();
+			// Same ordering WorldLoader.load uses: only commit the real static-layer tags (item/block/
+			// entity_type/... tags, shared with the rest of the running client) once the worldgen load that
+			// referenced their patched-but-not-yet-applied view has actually succeeded.
+			staticTags.forEach(Registry.PendingTags::apply);
 
-		// Same ordering WorldLoader.load uses: only commit the real static-layer tags (item/block/
-		// entity_type/... tags, shared with the rest of the running client) once the worldgen load that
-		// referenced their patched-but-not-yet-applied view has actually succeeded.
-		staticTags.forEach(Registry.PendingTags::apply);
-
-		return layers.replaceFrom(RegistryLayer.WORLDGEN, worldgenRegistries).compositeAccess();
+			return layers.replaceFrom(RegistryLayer.WORLDGEN, worldgenRegistries).compositeAccess();
+		}
 	}
 
 }
