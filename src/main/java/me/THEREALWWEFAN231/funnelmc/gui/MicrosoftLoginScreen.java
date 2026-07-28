@@ -1,5 +1,7 @@
 package me.THEREALWWEFAN231.funnelmc.gui;
 
+import java.util.function.Supplier;
+
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -8,27 +10,29 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 
+import me.THEREALWWEFAN231.funnelmc.auth.Auth;
 import me.THEREALWWEFAN231.funnelmc.auth.DeviceCodeAuth;
 import me.THEREALWWEFAN231.funnelmc.bedrockconnection.Client;
 
-// Shown while the player logs in with their Microsoft/Xbox account via the device code flow -
-// requests a short code, tells the player where to enter it, and waits. Client#initialize drives
-// this screen's state through the AuthListener callbacks; once auth succeeds this hands off to
-// whatever Minecraft's normal packet-driven screen transitions do next (the translated login
-// packets flow through the same client packet listener a real server connection would use).
+// Mandatory Microsoft/Xbox sign-in gate shown before the player can reach the "Connect to Bedrock
+// Server" screen at all. Logs in once via the device code flow, caches the result on Client.instance
+// (so BedrockConnectionScreen and FriendsListScreen can both reuse it for the rest of the session),
+// then hands off to whatever screen the caller wants to show next.
 @Environment(EnvType.CLIENT)
-public class DeviceCodeLoginScreen extends Screen implements Client.AuthListener {
+public class MicrosoftLoginScreen extends Screen {
 
 	private final Screen parent;
+	private final Supplier<Screen> nextScreen;
 	private Button copyCodeButton;
 
 	private String statusLine = "Requesting a login code from Microsoft...";
 	private String codeLine = "";
 	private DeviceCodeAuth.DeviceCodeInfo deviceCodeInfo;
 
-	public DeviceCodeLoginScreen(Screen parent) {
+	public MicrosoftLoginScreen(Screen parent, Supplier<Screen> nextScreen) {
 		super(Component.literal("Log in with Microsoft"));
 		this.parent = parent;
+		this.nextScreen = nextScreen;
 	}
 
 	@Override
@@ -42,6 +46,42 @@ public class DeviceCodeLoginScreen extends Screen implements Client.AuthListener
 
 		this.addRenderableWidget(Button.builder(CommonComponents.GUI_CANCEL, button -> this.minecraft.setScreenAndShow(this.parent))
 				.pos(this.width / 2 - 102, this.height / 2 + 45).size(204, 20).build());
+
+		this.startLogin();
+	}
+
+	private void startLogin() {
+		new Thread(() -> {
+			try {
+				this.deviceCodeInfo = DeviceCodeAuth.requestDeviceCode();
+				this.minecraft.execute(() -> {
+					this.statusLine = "Go to " + this.deviceCodeInfo.verificationUri + " and enter the code below:";
+					this.codeLine = this.deviceCodeInfo.userCode;
+					this.copyCodeButton.active = true;
+				});
+
+				String msaAccessToken = DeviceCodeAuth.pollForAccessToken(this.deviceCodeInfo);
+
+				Auth auth = new Auth();
+				java.util.List<String> onlineChainData = auth.getOnlineChainData(msaAccessToken);
+				String xboxLiveAuthorizationHeader = auth.getXboxLiveAuthorizationHeader();
+				Client.instance.setCachedLogin(auth, onlineChainData, xboxLiveAuthorizationHeader);
+
+				this.minecraft.execute(() -> {
+					this.statusLine = "Logged in!";
+					this.codeLine = "";
+					this.copyCodeButton.active = false;
+					this.minecraft.setScreenAndShow(this.nextScreen.get());
+				});
+			} catch (Exception e) {
+				e.printStackTrace();
+				this.minecraft.execute(() -> {
+					this.statusLine = "Login failed: " + e.getMessage();
+					this.codeLine = "";
+					this.copyCodeButton.active = false;
+				});
+			}
+		}, "FunnelMC-Login").start();
 	}
 
 	@Override
@@ -52,28 +92,6 @@ public class DeviceCodeLoginScreen extends Screen implements Client.AuthListener
 		if (!this.codeLine.isEmpty()) {
 			graphics.centeredText(this.font, Component.literal(this.codeLine), this.width / 2, this.height / 2 - 10, 0xFFFF55);
 		}
-	}
-
-	@Override
-	public void onDeviceCode(DeviceCodeAuth.DeviceCodeInfo deviceCodeInfo) {
-		this.deviceCodeInfo = deviceCodeInfo;
-		this.statusLine = "Go to " + deviceCodeInfo.verificationUri + " and enter the code below:";
-		this.codeLine = deviceCodeInfo.userCode;
-		this.copyCodeButton.active = true;
-	}
-
-	@Override
-	public void onAuthComplete() {
-		this.statusLine = "Logged in! Connecting to the server...";
-		this.codeLine = "";
-		this.copyCodeButton.active = false;
-	}
-
-	@Override
-	public void onAuthFailed(Exception e) {
-		this.statusLine = "Login failed: " + e.getMessage();
-		this.codeLine = "";
-		this.copyCodeButton.active = false;
 	}
 
 	@Override

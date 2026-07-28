@@ -6,7 +6,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import me.THEREALWWEFAN231.funnelmc.FunnelMC;
+import me.THEREALWWEFAN231.funnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.funnelmc.gui.BedrockConnectionScreen;
+import me.THEREALWWEFAN231.funnelmc.gui.MicrosoftLoginScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.gui.components.Button;
@@ -22,7 +24,12 @@ public class MixinMultiplayerScreen extends Screen {
 	@Inject(method = "init", at = @At(value = "RETURN"))
 	public void init(CallbackInfo callback) {
 		this.addRenderableWidget(Button.builder(Component.literal("Connect To Bedrock Server"), (button) -> {
-			FunnelMC.mc.setScreenAndShow(new BedrockConnectionScreen(this));
+			Screen self = this;
+			if (Client.instance.hasCachedLogin()) {
+				FunnelMC.mc.setScreenAndShow(new BedrockConnectionScreen(self));
+			} else {
+				FunnelMC.mc.setScreenAndShow(new MicrosoftLoginScreen(self, () -> new BedrockConnectionScreen(self)));
+			}
 		}).pos(5, 5).size(150, 20).build());
 	}
 

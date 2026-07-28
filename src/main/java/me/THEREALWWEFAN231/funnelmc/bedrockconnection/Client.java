@@ -19,12 +19,12 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import org.cloudburstmc.netty.channel.raknet.RakChannelFactory;
+import org.cloudburstmc.netty.channel.raknet.config.RakChannelOption;
 
 import java.util.List;
 
 import me.THEREALWWEFAN231.funnelmc.FunnelMC;
 import me.THEREALWWEFAN231.funnelmc.auth.Auth;
-import me.THEREALWWEFAN231.funnelmc.auth.DeviceCodeAuth;
 import me.THEREALWWEFAN231.funnelmc.auth.SkinData;
 import me.THEREALWWEFAN231.funnelmc.bedrockconnection.caches.BlockEntityDataCache;
 import me.THEREALWWEFAN231.funnelmc.bedrockconnection.caches.container.BedrockContainers;
@@ -51,22 +51,51 @@ public class Client {
 
 	private List<String> onlineChainData;
 
-	// Callbacks for showing a device-code login screen while online-mode auth is in progress.
-	// All three fire on the render thread.
-	public interface AuthListener {
-		void onDeviceCode(DeviceCodeAuth.DeviceCodeInfo deviceCodeInfo);
-		void onAuthComplete();
-		void onAuthFailed(Exception e);
+	// The player's Microsoft/Xbox login, obtained once via MicrosoftLoginScreen before the player
+	// can even reach the "Connect to Bedrock Server" screen, then reused for every join and for
+	// the friends list for the rest of this game session instead of logging in again each time.
+	public Auth cachedAuth;
+	public List<String> cachedOnlineChainData;
+	public String cachedXboxLiveAuthorizationHeader;
+
+	public boolean hasCachedLogin() {
+		return this.cachedAuth != null && this.cachedOnlineChainData != null;
 	}
 
+	public void setCachedLogin(Auth auth, List<String> onlineChainData, String xboxLiveAuthorizationHeader) {
+		this.cachedAuth = auth;
+		this.cachedOnlineChainData = onlineChainData;
+		this.cachedXboxLiveAuthorizationHeader = xboxLiveAuthorizationHeader;
+	}
+
+	// Guards against a connection attempt (or the auth flow leading up to one) being kicked off
+	// again while one is already in flight - e.g. a spammed Join Server click/held Enter key
+	// previously fired connect() dozens of times in a row, leaking a fresh NioEventLoopGroup each
+	// time. Reset once the in-flight attempt finishes, whether it succeeded or failed.
+	private volatile boolean connecting = false;
+
+	// Offline mode only - online mode always goes through connectWithExistingAuth, since the
+	// player already signed in via MicrosoftLoginScreen before reaching a screen that can call this.
 	public void initialize(String ip, int port, boolean onlineMode) {
-		this.initialize(ip, port, onlineMode, null);
+		if (this.connecting) {
+			return;
+		}
+		this.connecting = true;
+
+		this.ip = ip;
+		this.port = port;
+		this.onlineMode = onlineMode;
+		this.connect();
 	}
 
-	// For callers that already logged in (e.g. FriendsListScreen, which needs a login just to
-	// list friends before the player picks one to join) - skips the device code flow entirely
-	// instead of making the player log in again for every join.
+	// For callers that already logged in (via MicrosoftLoginScreen, cached on Client.instance) -
+	// skips the device code flow entirely instead of making the player log in again for every join.
 	public void connectWithExistingAuth(String ip, int port, Auth authData, List<String> onlineChainData) {
+		if (this.connecting) {
+			return;
+		}
+		this.connecting = true;
+
 		this.ip = ip;
 		this.port = port;
 		this.onlineMode = true;
@@ -75,55 +104,17 @@ public class Client {
 		this.connect();
 	}
 
-	public void initialize(String ip, int port, boolean onlineMode, AuthListener authListener) {
-		this.ip = ip;
-		this.port = port;
-		this.onlineMode = onlineMode;
-
-		if (!onlineMode) {
-			this.connect();
-			return;
-		}
-
-		// Do the Microsoft/Xbox Live login before opening the actual Bedrock connection - the
-		// device code flow can take minutes (the player has to go log in in a browser), and we
-		// don't want to be holding a raw connection open to the target server the whole time.
-		new Thread(() -> {
-			try {
-				this.authData = new Auth();
-
-				DeviceCodeAuth.DeviceCodeInfo deviceCodeInfo = DeviceCodeAuth.requestDeviceCode();
-				if (authListener != null) {
-					Minecraft.getInstance().execute(() -> authListener.onDeviceCode(deviceCodeInfo));
-				}
-
-				String msaAccessToken = DeviceCodeAuth.pollForAccessToken(deviceCodeInfo);
-				this.onlineChainData = this.authData.getOnlineChainData(msaAccessToken);
-
-				Minecraft.getInstance().execute(() -> {
-					if (authListener != null) {
-						authListener.onAuthComplete();
-					}
-					this.connect();
-				});
-			} catch (Exception e) {
-				e.printStackTrace();
-				if (authListener != null) {
-					Minecraft.getInstance().execute(() -> authListener.onAuthFailed(e));
-				}
-			}
-		}, "FunnelMC-Auth").start();
-	}
-
 	private void connect() {
 		org.apache.logging.log4j.core.Logger logger = (org.apache.logging.log4j.core.Logger) LogManager.getRootLogger();
 		logger.get().setLevel(Level.DEBUG);
 
 		InetSocketAddress addressToConnect = new InetSocketAddress(this.ip, this.port);
+		NioEventLoopGroup group = new NioEventLoopGroup();
 
 		ChannelFuture future = new Bootstrap()
 				.channelFactory(RakChannelFactory.client(NioDatagramChannel.class))
-				.group(new NioEventLoopGroup())
+				.option(RakChannelOption.RAK_PROTOCOL_VERSION, this.bedrockCodec.getRaknetProtocolVersion())
+				.group(group)
 				.handler(new BedrockClientInitializer() {
 					@Override
 					protected void initSession(BedrockClientSession session) {
@@ -137,7 +128,9 @@ public class Client {
 				.connect(addressToConnect);
 
 		future.addListener(result -> {
+			this.connecting = false;
 			if (!result.isSuccess()) {
+				group.shutdownGracefully();
 				Minecraft.getInstance().execute(() -> Minecraft.getInstance().disconnect(new DisconnectedScreen(Minecraft.getInstance().gui.screen(), Component.literal("Use Translated Here"), Component.literal(result.cause().getMessage())), false));
 			}
 		});
