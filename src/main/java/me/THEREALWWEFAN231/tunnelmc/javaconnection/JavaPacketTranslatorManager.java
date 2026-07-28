@@ -30,6 +30,7 @@ public class JavaPacketTranslatorManager {
 		this.addTranslator(new PlayerInteractItemC2SPacketTranslator());
 		this.addTranslator(new PlayerInteractEntityC2SPacketTranslator());
 		this.addTranslator(new ClientCommandC2SPacketTranslator());
+		this.addTranslator(new PlayerInputC2SPacketTranslator());
 		this.addTranslator(new CloseHandledScreenC2SPacketTranslator());
 		this.addTranslator(this.clickSlotTranslator = new ClickSlotC2SPacketTranslator());
 		this.addTranslator(new UpdatePlayerAbilitiesTranslator());

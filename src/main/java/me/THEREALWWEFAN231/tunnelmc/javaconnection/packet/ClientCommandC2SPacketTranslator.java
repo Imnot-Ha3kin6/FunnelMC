@@ -8,40 +8,27 @@ import me.THEREALWWEFAN231.tunnelmc.TunnelMC;
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
 import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket;
-import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket.Mode;
 
-public class ClientCommandC2SPacketTranslator extends PacketTranslator<ClientCommandC2SPacket> {
+public class ClientCommandC2SPacketTranslator extends PacketTranslator<ServerboundPlayerCommandPacket> {
 
+	// Note: sneak (shift) state moved to ServerboundPlayerInputPacket in modern MC -
+	// see PlayerInputC2SPacketTranslator.
 	@Override
-	public void translate(ClientCommandC2SPacket packet) {
+	public void translate(ServerboundPlayerCommandPacket packet) {
 
-		if (packet.getMode() == Mode.PRESS_SHIFT_KEY) {
-			PlayerActionPacket playerActionPacket = new PlayerActionPacket();
-			playerActionPacket.setRuntimeEntityId(TunnelMC.mc.player.getEntityId());
-			playerActionPacket.setAction(PlayerActionType.START_SNEAK);
-			playerActionPacket.setBlockPosition(Vector3i.ZERO);
-			
-			Client.instance.sendPacket(playerActionPacket);
-		} else if (packet.getMode() == Mode.RELEASE_SHIFT_KEY) {
-			PlayerActionPacket playerActionPacket = new PlayerActionPacket();
-			playerActionPacket.setRuntimeEntityId(TunnelMC.mc.player.getEntityId());
-			playerActionPacket.setAction(PlayerActionType.STOP_SNEAK);
-			playerActionPacket.setBlockPosition(Vector3i.ZERO);
-			
-			Client.instance.sendPacket(playerActionPacket);
-		} else if (packet.getMode() == Mode.START_SPRINTING) {
+		if (packet.getAction() == ServerboundPlayerCommandPacket.Action.START_SPRINTING) {
 			PlayerActionPacket playerActionPacket = new PlayerActionPacket();
 			playerActionPacket.setRuntimeEntityId(TunnelMC.mc.player.getEntityId());
 			playerActionPacket.setAction(PlayerActionType.START_SPRINT);
 			playerActionPacket.setBlockPosition(Vector3i.ZERO);
-			
+
 			Client.instance.sendPacket(playerActionPacket);
-		} else if (packet.getMode() == Mode.STOP_SPRINTING) {
+		} else if (packet.getAction() == ServerboundPlayerCommandPacket.Action.STOP_SPRINTING) {
 			PlayerActionPacket playerActionPacket = new PlayerActionPacket();
 			playerActionPacket.setRuntimeEntityId(TunnelMC.mc.player.getEntityId());
 			playerActionPacket.setAction(PlayerActionType.STOP_SPRINT);
 			playerActionPacket.setBlockPosition(Vector3i.ZERO);
-			
+
 			Client.instance.sendPacket(playerActionPacket);
 		}
 
@@ -49,7 +36,7 @@ public class ClientCommandC2SPacketTranslator extends PacketTranslator<ClientCom
 
 	@Override
 	public Class<?> getPacketClass() {
-		return ClientCommandC2SPacket.class;
+		return ServerboundPlayerCommandPacket.class;
 	}
 
 }

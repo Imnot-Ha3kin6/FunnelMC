@@ -15,22 +15,21 @@ import me.THEREALWWEFAN231.tunnelmc.events.EventPlayerTick;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
-import net.minecraft.server.dialog.action.Action;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.GameType;
 
-public class PlayerActionTranslator extends PacketTranslator<PlayerActionC2SPacket> {
+public class PlayerActionTranslator extends PacketTranslator<ServerboundPlayerActionPacket> {
 
 	private Direction lastDirection;
 	private Vector3i lastBlockPosition;
 
 	@Override
-	public void translate(PlayerActionC2SPacket packet) {
+	public void translate(ServerboundPlayerActionPacket packet) {
 
 		int runtimeId = TunnelMC.mc.player.getEntityId();
 
 		Vector3i blockPosition = Vector3i.from(packet.getPos().getX(), packet.getPos().getY(), packet.getPos().getZ());
-		if (packet.getAction() == Action.START_DESTROY_BLOCK) {
+		if (packet.getAction() == ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK) {
 			this.lastDirection = packet.getDirection();
 			this.lastBlockPosition = blockPosition;
 
@@ -43,7 +42,7 @@ public class PlayerActionTranslator extends PacketTranslator<PlayerActionC2SPack
 			Client.instance.sendPacket(playerActionPacket);
 
 			EventManager.register(this);
-		} else if (packet.getAction() == Action.STOP_DESTROY_BLOCK) {
+		} else if (packet.getAction() == ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK) {
 			PlayerActionPacket playerActionPacket = new PlayerActionPacket();
 			playerActionPacket.setRuntimeEntityId(runtimeId);
 			playerActionPacket.setAction(PlayerActionType.STOP_BREAK);
@@ -52,7 +51,7 @@ public class PlayerActionTranslator extends PacketTranslator<PlayerActionC2SPack
 
 			Client.instance.sendPacket(playerActionPacket);
 
-			if (MinecraftClient.getInstance().interactionManager.getCurrentGameMode() == GameMode.CREATIVE) {
+			if (Minecraft.getInstance().gameMode.getPlayerMode() == GameType.CREATIVE) {
 				//TODO
 				PlayerActionPacket creativePacket = new PlayerActionPacket();
 				creativePacket.setRuntimeEntityId(runtimeId);
@@ -72,14 +71,14 @@ public class PlayerActionTranslator extends PacketTranslator<PlayerActionC2SPack
 			inventoryTransactionPacket.setActionType(2);
 			inventoryTransactionPacket.setBlockPosition(blockPosition);
 			inventoryTransactionPacket.setBlockFace(packet.getDirection().ordinal());
-			inventoryTransactionPacket.setHotbarSlot(TunnelMC.mc.player.inventory.selectedSlot);
-			inventoryTransactionPacket.setItemInHand(Client.instance.containers.getPlayerInventory().getItemFromSlot(TunnelMC.mc.player.inventory.selectedSlot));
-			inventoryTransactionPacket.setPlayerPosition(Vector3f.from(TunnelMC.mc.player.getPos().x, TunnelMC.mc.player.getPos().y, TunnelMC.mc.player.getPos().z));
+			inventoryTransactionPacket.setHotbarSlot(TunnelMC.mc.player.getInventory().getSelectedSlot());
+			inventoryTransactionPacket.setItemInHand(Client.instance.containers.getPlayerInventory().getItemFromSlot(TunnelMC.mc.player.getInventory().getSelectedSlot()));
+			inventoryTransactionPacket.setPlayerPosition(Vector3f.from(TunnelMC.mc.player.getX(), TunnelMC.mc.player.getY(), TunnelMC.mc.player.getZ()));
 			inventoryTransactionPacket.setClickPosition(Vector3f.ZERO);
 
 			Client.instance.sendPacket(inventoryTransactionPacket);
 
-		} else if (packet.getAction() == Action.ABORT_DESTROY_BLOCK) {
+		} else if (packet.getAction() == ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK) {
 			PlayerActionPacket playerActionPacket = new PlayerActionPacket();
 			playerActionPacket.setRuntimeEntityId(runtimeId);
 			playerActionPacket.setAction(PlayerActionType.ABORT_BREAK);
@@ -97,7 +96,7 @@ public class PlayerActionTranslator extends PacketTranslator<PlayerActionC2SPack
 
 	@Override
 	public Class<?> getPacketClass() {
-		return PlayerActionC2SPacket.class;
+		return ServerboundPlayerActionPacket.class;
 	}
 
 	@EventTarget
