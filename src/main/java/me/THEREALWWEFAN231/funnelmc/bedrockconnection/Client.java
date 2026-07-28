@@ -226,7 +226,11 @@ public class Client {
 	// deaths - RespawnPacketTranslator uses this to tell the two apart, since translating the
 	// handshake's SERVER_READY into a real Java ClientboundRespawnPacket resets ClientPacketListener's
 	// LevelLoadTracker back to its initial WaitingForServer state, undoing LEVEL_CHUNKS_LOAD_START and
-	// leaving the "Loading Terrain" screen stuck forever. Set once StartGameTranslator finishes.
+	// leaving the "Loading Terrain" screen stuck forever. Starts false and is flipped true by
+	// RespawnPacketTranslator itself the first time it sees SERVER_READY (that first occurrence is
+	// always the join handshake and gets swallowed instead of translated) - NOT by StartGameTranslator,
+	// since the handshake's SERVER_READY packet arrives after StartGamePacket is already done
+	// processing, so a flag set there would already read true and never gate anything.
 	public boolean initialSpawnComplete = false;
 
 	public boolean isConnectionOpen() {

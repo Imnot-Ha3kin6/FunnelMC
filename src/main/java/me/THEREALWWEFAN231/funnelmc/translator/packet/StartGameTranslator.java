@@ -122,11 +122,10 @@ public class StartGameTranslator extends PacketTranslator<StartGamePacket> {
 		setLocalPlayerAsInitializedPacket.setRuntimeEntityId(lastRunTimeId);
 		Client.instance.sendPacketImmediately(setLocalPlayerAsInitializedPacket);
 
-		// Marks the initial join as finished so RespawnPacketTranslator can tell Bedrock's respawn
-		// handshake (which also runs during a fresh join, not just actual deaths) apart from a real
-		// subsequent respawn - see the field's own comment in Client.java for why that distinction
-		// matters.
-		Client.instance.initialSpawnComplete = true;
+		// initialSpawnComplete is NOT set here - the join handshake's RespawnPacket(SERVER_READY)
+		// arrives as its own later packet, after this method returns, so setting the flag this early
+		// would already be true by the time it shows up and defeat the gate entirely. See
+		// RespawnPacketTranslator, which owns setting this flag on the first SERVER_READY it sees.
 	}
 
 	@Override
