@@ -10,10 +10,10 @@ import com.darkmagician6.eventapi.EventManager;
 import me.THEREALWWEFAN231.tunnelmc.events.EventPlayerTick;
 import net.minecraft.client.player.LocalPlayer;
 
-@Mixin(ClientPlayerEntity.class)
+@Mixin(LocalPlayer.class)
 public class MixinClientPlayerEntity {
 
-	@Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/AbstractClientPlayerEntity;tick()V"))
+	@Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/AbstractClientPlayer;tick()V"))
 	public void tick(CallbackInfo callbackInfo) {
 		EventManager.call(new EventPlayerTick());
 	}

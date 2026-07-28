@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Block.class)
 public class MixinBlock {
     @Inject(method = "onBreak", at = @At("HEAD"), cancellable = true)
-    public void onBreak(World world, BlockPos pos, BlockState state, PlayerEntity player, CallbackInfo ci) {
+    public void onBreak(Level world, BlockPos pos, BlockState state, Player player, CallbackInfo ci) {
         // Let the server send this instead of the client inferring it
         if (Client.instance.isConnectionOpen()) {
             ci.cancel();

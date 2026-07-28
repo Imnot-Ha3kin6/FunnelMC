@@ -14,7 +14,7 @@ import net.minecraft.client.Minecraft;
 public class TunnelMC {
 
 	public static TunnelMC instance = new TunnelMC();
-	public static MinecraftClient mc = MinecraftClient.getInstance();
+	public static Minecraft mc = Minecraft.getInstance();
 
 	public FileManagement fileManagement;
 	public PacketTranslatorManager packetTranslatorManager;

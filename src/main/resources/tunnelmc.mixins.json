@@ -13,17 +13,13 @@
     "MixinMultiplayerScreen",
     "MixinScreenHandler",
     "MixinHandledScreen",
-    "interfaces.IMixinCloseHandledScreenC2SPacket",
-    "interfaces.IMixinPlayerInteractEntityC2SPacket",
     "interfaces.IMixinPlayerListS2CPacket",
     "interfaces.IMixinSlot"
   ],
   "mixins": [
     "MixinBlock",
     "MixinClientPlayerInteractionHandler",
-    "MixinClientWorld",
     "MixinWorldRenderer",
-    "interfaces.IMixinClientPlayerInteractionManager",
-    "interfaces.IMixinWorldRenderer"
+    "interfaces.IMixinClientPlayerInteractionManager"
   ]
 }

@@ -1,62 +1,24 @@
 package me.THEREALWWEFAN231.tunnelmc.mixins;
 
-import org.cloudburstmc.math.vector.Vector3i;
-import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
-import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
-import me.THEREALWWEFAN231.tunnelmc.translator.packet.world.LevelEventTranslator;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.render.*;
-import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
-import net.minecraft.util.Mth;
-import org.cloudburstmc.math.matrix.Matrix4f;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.Map;
-import java.util.SortedSet;
-
-@Mixin(WorldRenderer.class)
+// Block-breaking progress tracking moved from WorldRenderer to ClientLevel#destroyBlockProgress
+// in modern MC (no more render()-loop hooking needed - see LevelEventTranslator, which now
+// calls ClientLevel#destroyBlockProgress directly to drive Bedrock-side breaking progress).
+@Mixin(ClientLevel.class)
 public class MixinWorldRenderer {
 
-    @Shadow @Final private Long2ObjectMap<SortedSet<BlockBreakingInfo>> blockBreakingProgressions;
-
-    @Shadow @Final private MinecraftClient client;
-
-    @Inject(method = "setBlockBreakingInfo", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "destroyBlockProgress", at = @At("HEAD"), cancellable = true)
     public void cancelBlockBreakingInfo(int entityId, BlockPos pos, int stage, CallbackInfo ci) {
-        if (Client.instance.isConnectionOpen() && entityId == this.client.player.getEntityId()) {
-            // Don't let the client set this - let the server
+        if (Client.instance.isConnectionOpen()) {
+            // Don't let the client set this - let the server (via LevelEventTranslator)
             ci.cancel();
-        }
-    }
-
-    @Inject(method = "render", at = @At("HEAD"))
-    public void render(MatrixStack matrices, float tickDelta, long limitTime, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightmapTextureManager lightmapTextureManager, Matrix4f matrix4f, CallbackInfo ci) {
-        // Manually set the block breaking progressions based on the server
-        ObjectIterator<Map.Entry<Vector3i, LevelEventTranslator.BlockBreakingWrapper>> iterator = LevelEventTranslator.BLOCK_BREAKING_INFOS.entrySet().iterator();
-        while (iterator.hasNext()) {
-            Map.Entry<Vector3i, LevelEventTranslator.BlockBreakingWrapper> entry = iterator.next();
-
-            if ((System.currentTimeMillis() - entry.getValue().lastUpdate) >= 50) {
-                entry.getValue().currentDuration += (entry.getValue().length / (float) 65535);
-                entry.getValue().lastUpdate = System.currentTimeMillis();
-            }
-            int z = (int) (entry.getValue().currentDuration * 10F) - 1;
-            z = MathHelper.clamp(z, 0, 10);
-            long key = BlockPos.asLong(entry.getKey().getX(), entry.getKey().getY(), entry.getKey().getZ());
-            if (LevelEventTranslator.TO_REMOVE.remove(key) || z == 10) { // Prevent concurrency issues by having a separate list
-                // We have exceeded the stages
-                iterator.remove();
-                this.blockBreakingProgressions.remove(key);
-                continue;
-            }
-            entry.getValue().blockBreakingInfo.setStage(z);
         }
     }
 }

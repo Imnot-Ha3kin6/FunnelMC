@@ -7,25 +7,18 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import net.minecraft.client.player.AbstractClientPlayer;
-import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.player.PlayerSkin;
 
-@Mixin(AbstractClientPlayerEntity.class)
+@Mixin(AbstractClientPlayer.class)
 public class MixinAbstractClientPlayerEntity {
 
 	//TODO: probably want to use PlayerSkinProvider.loadSkin instead, it should work with PlayerListHud as well
 	//disabled these because they crash often, kind of
-	@Inject(method = "getSkinTexture", at = @At("HEAD"), cancellable = true)
-	public void getSkinTexture(CallbackInfoReturnable<Identifier> callbackInfoReturnable) {
+	//also: getSkinTexture()/getModel() were merged into a single getSkin() returning PlayerSkin in modern MC
+	@Inject(method = "getSkin", at = @At("HEAD"), cancellable = true)
+	public void getSkin(CallbackInfoReturnable<PlayerSkin> callbackInfoReturnable) {
 		if (Client.instance.isConnectionOpen()) {
-			//callbackInfoReturnable.setReturnValue(PlayerListPacketTranslator.skins.get(AbstractClientPlayerEntity.class.cast(this).getGameProfile().getName()).texture);
-		}
-	}
-
-	@Inject(method = "getModel", at = @At("HEAD"), cancellable = true)
-	public void getModel(CallbackInfoReturnable<String> callbackInfoReturnable) {
-		if (Client.instance.isConnectionOpen()) {
-			//boolean isSlim = PlayerListPacketTranslator.skins.get(AbstractClientPlayerEntity.class.cast(this).getGameProfile().getName()).slim;
-			//callbackInfoReturnable.setReturnValue(isSlim ? "slim" : "default");
+			//callbackInfoReturnable.setReturnValue(PlayerListPacketTranslator.skins.get(AbstractClientPlayer.class.cast(this).getGameProfile().getName()).texture);
 		}
 	}
 

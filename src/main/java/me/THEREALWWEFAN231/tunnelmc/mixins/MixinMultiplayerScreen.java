@@ -12,7 +12,7 @@ import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 
-@Mixin(MultiplayerScreen.class)
+@Mixin(JoinMultiplayerScreen.class)
 public class MixinMultiplayerScreen extends Screen {
 
 	protected MixinMultiplayerScreen(Component title) {
@@ -21,9 +21,9 @@ public class MixinMultiplayerScreen extends Screen {
 
 	@Inject(method = "init", at = @At(value = "RETURN"))
 	public void init(CallbackInfo callback) {
-		this.addButton(new ButtonWidget(5, 5, 150, 20, Component.literal("Connect To Bedrock Server"), (buttonWidget) -> {
-			TunnelMC.mc.openScreen(new BedrockConnectionScreen(this));
-		}));
+		this.addRenderableWidget(Button.builder(Component.literal("Connect To Bedrock Server"), (button) -> {
+			TunnelMC.mc.setScreenAndShow(new BedrockConnectionScreen(this));
+		}).pos(5, 5).size(150, 20).build());
 	}
 
 }
