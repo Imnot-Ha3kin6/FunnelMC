@@ -50,6 +50,35 @@ dependencies {
 	include("org.cloudburstmc.netty:netty-transport-raknet:${project.cloudburst_raknet_version}") {
 		exclude group: 'io.netty'
 	}
+
+	// The artifacts above only get their own jar bundled by Loom's `include` - none of their own
+	// transitive dependencies are pulled in automatically. These are the transitive libraries that
+	// aren't already part of vanilla Minecraft's own dependency set (verified by diffing the
+	// resolved runtimeClasspath with and without the block above), so without explicitly declaring
+	// and including them here too, the game crashes with NoClassDefFoundError the first time one of
+	// these classes is touched at runtime.
+	def bedrockTransitives = [
+		"org.cloudburstmc:nbt:3.0.4.Final",
+		"org.bitbucket.b_c:jose4j:0.9.6",
+		"net.jodah:expiringmap:0.5.10",
+		"io.airlift:aircompressor:0.27",
+		"com.nukkitx:natives:1.0.3",
+		"org.cloudburstmc.fastutil:core:8.5.15",
+		"org.cloudburstmc.fastutil.commons:int-common:8.5.15",
+		"org.cloudburstmc.fastutil.commons:long-common:8.5.15",
+		"org.cloudburstmc.fastutil.commons:object-common:8.5.15",
+		"org.cloudburstmc.fastutil.maps:int-object-maps:8.5.15",
+		"org.cloudburstmc.fastutil.maps:long-object-maps:8.5.15",
+		"org.cloudburstmc.fastutil.maps:object-int-maps:8.5.15",
+		"org.cloudburstmc.fastutil.sets:int-sets:8.5.15",
+		"org.cloudburstmc.fastutil.sets:long-sets:8.5.15",
+		"org.cloudburstmc.fastutil.sets:object-sets:8.5.15",
+		"com.fasterxml.jackson.core:jackson-annotations:2.18.0",
+	]
+	bedrockTransitives.each {
+		implementation it
+		include it
+	}
 }
 
 processResources {
