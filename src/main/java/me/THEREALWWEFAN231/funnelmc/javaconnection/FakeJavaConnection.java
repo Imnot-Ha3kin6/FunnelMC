@@ -5,6 +5,8 @@ import java.util.UUID;
 
 import com.mojang.authlib.GameProfile;
 
+import io.netty.channel.embedded.EmbeddedChannel;
+
 import me.THEREALWWEFAN231.funnelmc.FunnelMC;
 import me.THEREALWWEFAN231.funnelmc.bedrockconnection.Client;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -26,6 +28,19 @@ public class FakeJavaConnection {
 
 	public FakeJavaConnection() {
 		this.connection = new Connection(PacketFlow.CLIENTBOUND);
+		// Connection.isConnected() is channel != null && channel.isOpen() - with no channel ever
+		// attached, that's permanently false, which matters far beyond just networking: vanilla's own
+		// MultiPlayerGameMode.tick() (called every client tick once a real login has happened) checks
+		// isConnected() before calling connection.tick() - the thing that actually drives
+		// ClientPacketListener.tick(), which is what advances LevelLoadTracker (the "Loading terrain"
+		// screen's dismissal condition) and everything else Connection.tick() covers (telemetry,
+		// deferred packets, ...). Otherwise it silently takes the disconnected-else-branch every tick
+		// forever (itself a no-op too, since handleDisconnection() also requires a non-null channel) -
+		// nothing crashes, but nothing that depends on periodic ticking ever runs either. An
+		// EmbeddedChannel is enough to make channelActive() fire and give Connection a real, open
+		// channel - we don't need actual byte transport through it, since packets are handled directly
+		// via processServerToClientPacket() below rather than by decoding real bytes off this channel.
+		new EmbeddedChannel(this.connection);
 		GameProfile gameProfile = new GameProfile(Client.instance.authData.getIdentity(), Client.instance.authData.getDisplayName());
 		// TODO: several of these cookie fields are placeholders (null/empty) since we have no
 		// real Java server to source them from. Registry access is rebuilt from vanilla's bundled
