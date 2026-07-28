@@ -3,7 +3,7 @@ package me.THEREALWWEFAN231.tunnelmc.mixins.interfaces;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-import net.minecraft.world.dimension.DimensionType;
+import net.minecraft.world.level.dimension.DimensionType;
 
 @Mixin(DimensionType.class)
 public interface IMixinDimensionType {

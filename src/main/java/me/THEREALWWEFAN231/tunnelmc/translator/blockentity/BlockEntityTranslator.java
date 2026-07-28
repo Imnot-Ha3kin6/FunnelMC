@@ -1,6 +1,6 @@
 package me.THEREALWWEFAN231.tunnelmc.translator.blockentity;
 
-import com.nukkitx.nbt.NbtMap;
+import org.cloudburstmc.nbt.NbtMap;
 import net.minecraft.nbt.CompoundTag;
 
 public abstract class BlockEntityTranslator {

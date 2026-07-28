@@ -1,7 +1,7 @@
 package me.THEREALWWEFAN231.tunnelmc.translator.packet.inventory;
 
-import com.nukkitx.protocol.bedrock.data.inventory.ItemData;
-import com.nukkitx.protocol.bedrock.packet.InventoryContentPacket;
+import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
+import org.cloudburstmc.protocol.bedrock.packet.InventoryContentPacket;
 
 import me.THEREALWWEFAN231.tunnelmc.TunnelMC;
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
@@ -10,9 +10,9 @@ import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.caches.container.BedrockCo
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
 import me.THEREALWWEFAN231.tunnelmc.translator.container.screenhandler.ScreenHandlerTranslatorManager;
 import me.THEREALWWEFAN231.tunnelmc.translator.item.ItemTranslator;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.packet.s2c.play.InventoryS2CPacket;
-import net.minecraft.util.collection.DefaultedList;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.network.protocol.game.ClientboundContainerSetContentPacket;
+import net.minecraft.core.NonNullList;
 
 public class InventoryContentPacketTranslator extends PacketTranslator<InventoryContentPacket> {
 

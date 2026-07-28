@@ -2,22 +2,22 @@ package me.THEREALWWEFAN231.tunnelmc.javaconnection.packet;
 
 import com.darkmagician6.eventapi.EventManager;
 import com.darkmagician6.eventapi.EventTarget;
-import com.nukkitx.math.vector.Vector3f;
-import com.nukkitx.math.vector.Vector3i;
-import com.nukkitx.protocol.bedrock.data.PlayerActionType;
-import com.nukkitx.protocol.bedrock.data.inventory.TransactionType;
-import com.nukkitx.protocol.bedrock.packet.InventoryTransactionPacket;
-import com.nukkitx.protocol.bedrock.packet.PlayerActionPacket;
+import org.cloudburstmc.math.vector.Vector3f;
+import org.cloudburstmc.math.vector.Vector3i;
+import org.cloudburstmc.protocol.bedrock.data.PlayerActionType;
+import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.InventoryTransactionType;
+import org.cloudburstmc.protocol.bedrock.packet.InventoryTransactionPacket;
+import org.cloudburstmc.protocol.bedrock.packet.PlayerActionPacket;
 
 import me.THEREALWWEFAN231.tunnelmc.TunnelMC;
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.tunnelmc.events.EventPlayerTick;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket.Action;
-import net.minecraft.util.math.Direction;
-import net.minecraft.world.GameMode;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.server.dialog.action.Action;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.GameType;
 
 public class PlayerActionTranslator extends PacketTranslator<PlayerActionC2SPacket> {
 
@@ -68,7 +68,7 @@ public class PlayerActionTranslator extends PacketTranslator<PlayerActionC2SPack
 			EventManager.unregister(this);
 
 			InventoryTransactionPacket inventoryTransactionPacket = new InventoryTransactionPacket();
-			inventoryTransactionPacket.setTransactionType(TransactionType.ITEM_USE);
+			inventoryTransactionPacket.setTransactionType(InventoryTransactionType.ITEM_USE);
 			inventoryTransactionPacket.setActionType(2);
 			inventoryTransactionPacket.setBlockPosition(blockPosition);
 			inventoryTransactionPacket.setBlockFace(packet.getDirection().ordinal());

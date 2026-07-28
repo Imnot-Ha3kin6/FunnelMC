@@ -1,12 +1,12 @@
 package me.THEREALWWEFAN231.tunnelmc.javaconnection.packet;
 
-import com.nukkitx.protocol.bedrock.data.AdventureSetting;
-import com.nukkitx.protocol.bedrock.data.PlayerPermission;
-import com.nukkitx.protocol.bedrock.data.command.CommandPermission;
-import com.nukkitx.protocol.bedrock.packet.AdventureSettingsPacket;
+import org.cloudburstmc.protocol.bedrock.data.AdventureSetting;
+import org.cloudburstmc.protocol.bedrock.data.PlayerPermission;
+import org.cloudburstmc.protocol.bedrock.data.command.CommandPermission;
+import org.cloudburstmc.protocol.bedrock.packet.AdventureSettingsPacket;
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
-import net.minecraft.network.packet.c2s.play.UpdatePlayerAbilitiesC2SPacket;
+import net.minecraft.network.protocol.game.ServerboundPlayerAbilitiesPacket;
 
 public class UpdatePlayerAbilitiesTranslator extends PacketTranslator<UpdatePlayerAbilitiesC2SPacket> {
     @Override

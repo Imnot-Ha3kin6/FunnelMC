@@ -1,8 +1,8 @@
 package me.THEREALWWEFAN231.tunnelmc.utils;
 
-import com.nukkitx.math.vector.Vector3f;
-import com.nukkitx.math.vector.Vector3i;
-import net.minecraft.util.math.BlockPos;
+import org.cloudburstmc.math.vector.Vector3f;
+import org.cloudburstmc.math.vector.Vector3i;
+import net.minecraft.core.BlockPos;
 
 public class PositionUtil {
     public static BlockPos toBlockPos(Vector3i vector) {

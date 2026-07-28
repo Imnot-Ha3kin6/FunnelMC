@@ -2,7 +2,7 @@ package me.THEREALWWEFAN231.tunnelmc.translator.gamemode;
 
 import com.nukkitx.protocol.bedrock.data.GameType;
 
-import net.minecraft.world.GameMode;
+import net.minecraft.world.level.GameType;
 
 public class GameModeTranslator {
 

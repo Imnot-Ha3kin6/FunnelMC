@@ -1,9 +1,9 @@
 package me.THEREALWWEFAN231.tunnelmc.translator.blockentity;
 
-import com.nukkitx.nbt.NbtMap;
+import org.cloudburstmc.nbt.NbtMap;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.text.LiteralText;
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
 
 public class SignBlockEntityTranslator extends BlockEntityTranslator {
     @Override

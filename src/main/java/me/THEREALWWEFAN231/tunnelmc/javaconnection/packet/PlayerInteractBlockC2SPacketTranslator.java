@@ -1,18 +1,18 @@
 package me.THEREALWWEFAN231.tunnelmc.javaconnection.packet;
 
-import com.nukkitx.math.vector.Vector3f;
-import com.nukkitx.math.vector.Vector3i;
-import com.nukkitx.protocol.bedrock.data.inventory.ItemData;
-import com.nukkitx.protocol.bedrock.data.inventory.TransactionType;
-import com.nukkitx.protocol.bedrock.packet.InventoryTransactionPacket;
+import org.cloudburstmc.math.vector.Vector3f;
+import org.cloudburstmc.math.vector.Vector3i;
+import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
+import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.InventoryTransactionType;
+import org.cloudburstmc.protocol.bedrock.packet.InventoryTransactionPacket;
 
 import me.THEREALWWEFAN231.tunnelmc.TunnelMC;
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
-import net.minecraft.entity.EntityPose;
-import net.minecraft.network.packet.c2s.play.PlayerInteractBlockC2SPacket;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.entity.Pose;
+import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
 
 public class PlayerInteractBlockC2SPacketTranslator extends PacketTranslator<PlayerInteractBlockC2SPacket> {
 
@@ -28,7 +28,7 @@ public class PlayerInteractBlockC2SPacketTranslator extends PacketTranslator<Pla
 		ItemData placingItem = Client.instance.containers.getPlayerInventory().getItemFromSlot(TunnelMC.mc.player.inventory.selectedSlot);
 
 		InventoryTransactionPacket placeInventoryTransactionPacket = new InventoryTransactionPacket();
-		placeInventoryTransactionPacket.setTransactionType(TransactionType.ITEM_USE);
+		placeInventoryTransactionPacket.setTransactionType(InventoryTransactionType.ITEM_USE);
 		placeInventoryTransactionPacket.setActionType(0);
 		placeInventoryTransactionPacket.setBlockPosition(blockPosition);
 		placeInventoryTransactionPacket.setBlockFace(packet.getBlockHitResult().getSide().ordinal());
@@ -41,7 +41,7 @@ public class PlayerInteractBlockC2SPacketTranslator extends PacketTranslator<Pla
 
 		//when using proxy pass and spying on the client it sends 2 InventoryTransactionPackets
 		InventoryTransactionPacket idkInventoryTransactionPacket = new InventoryTransactionPacket();
-		idkInventoryTransactionPacket.setTransactionType(TransactionType.ITEM_USE);
+		idkInventoryTransactionPacket.setTransactionType(InventoryTransactionType.ITEM_USE);
 		idkInventoryTransactionPacket.setActionType(1);
 		idkInventoryTransactionPacket.setBlockPosition(Vector3i.ZERO);
 		idkInventoryTransactionPacket.setBlockFace(255);

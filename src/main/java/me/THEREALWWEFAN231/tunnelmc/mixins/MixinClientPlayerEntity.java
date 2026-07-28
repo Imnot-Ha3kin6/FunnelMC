@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.darkmagician6.eventapi.EventManager;
 
 import me.THEREALWWEFAN231.tunnelmc.events.EventPlayerTick;
-import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.player.LocalPlayer;
 
 @Mixin(ClientPlayerEntity.class)
 public class MixinClientPlayerEntity {

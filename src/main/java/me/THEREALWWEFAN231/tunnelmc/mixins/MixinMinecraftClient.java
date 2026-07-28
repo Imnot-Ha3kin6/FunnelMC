@@ -6,16 +6,16 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import com.nukkitx.protocol.bedrock.packet.InteractPacket;
-import com.nukkitx.protocol.bedrock.packet.InteractPacket.Action;
+import org.cloudburstmc.protocol.bedrock.packet.InteractPacket;
+import net.minecraft.server.dialog.action.Action;
 
 import me.THEREALWWEFAN231.tunnelmc.TunnelMC;
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.particle.ParticleManager;
-import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.particle.ParticleEngine;
+import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 
 @Mixin(MinecraftClient.class)
 public class MixinMinecraftClient {

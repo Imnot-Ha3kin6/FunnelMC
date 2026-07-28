@@ -1,11 +1,11 @@
 package me.THEREALWWEFAN231.tunnelmc.javaconnection.packet;
 
-import com.nukkitx.protocol.bedrock.data.inventory.InventoryActionData;
-import com.nukkitx.protocol.bedrock.data.inventory.InventorySource;
-import com.nukkitx.protocol.bedrock.data.inventory.InventorySource.Flag;
-import com.nukkitx.protocol.bedrock.data.inventory.ItemData;
-import com.nukkitx.protocol.bedrock.data.inventory.TransactionType;
-import com.nukkitx.protocol.bedrock.packet.InventoryTransactionPacket;
+import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.InventoryActionData;
+import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.InventorySource;
+import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.InventorySource.Flag;
+import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
+import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.InventoryTransactionType;
+import org.cloudburstmc.protocol.bedrock.packet.InventoryTransactionPacket;
 
 import me.THEREALWWEFAN231.tunnelmc.TunnelMC;
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
@@ -13,8 +13,8 @@ import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.caches.container.BedrockCo
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
 import me.THEREALWWEFAN231.tunnelmc.translator.container.screenhandler.ScreenHandlerTranslatorManager;
 import me.THEREALWWEFAN231.tunnelmc.utils.ItemDataUtils;
-import net.minecraft.network.packet.c2s.play.ClickSlotC2SPacket;
-import net.minecraft.screen.ScreenHandler;
+import net.minecraft.network.protocol.game.ServerboundContainerClickPacket;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 
 public class ClickSlotC2SPacketTranslator extends PacketTranslator<ClickSlotC2SPacket> {
 
@@ -33,7 +33,7 @@ public class ClickSlotC2SPacketTranslator extends PacketTranslator<ClickSlotC2SP
 
 		InventoryTransactionPacket inventoryTransactionPacket = new InventoryTransactionPacket();
 
-		inventoryTransactionPacket.setTransactionType(TransactionType.NORMAL);
+		inventoryTransactionPacket.setTransactionType(InventoryTransactionType.NORMAL);
 		inventoryTransactionPacket.setActionType(0);//I have no idea
 		inventoryTransactionPacket.setRuntimeEntityId(TunnelMC.mc.player.getEntityId());
 
@@ -80,7 +80,7 @@ public class ClickSlotC2SPacketTranslator extends PacketTranslator<ClickSlotC2SP
 	public void onEmptyCursorClickStack(ScreenHandler screenHandler, int clickedSlotId) {
 		InventoryTransactionPacket inventoryTransactionPacket = new InventoryTransactionPacket();
 
-		inventoryTransactionPacket.setTransactionType(TransactionType.NORMAL);
+		inventoryTransactionPacket.setTransactionType(InventoryTransactionType.NORMAL);
 		inventoryTransactionPacket.setActionType(0);//I have no idea
 		inventoryTransactionPacket.setRuntimeEntityId(TunnelMC.mc.player.getEntityId());
 
@@ -118,7 +118,7 @@ public class ClickSlotC2SPacketTranslator extends PacketTranslator<ClickSlotC2SP
 
 		InventoryTransactionPacket inventoryTransactionPacket = new InventoryTransactionPacket();
 
-		inventoryTransactionPacket.setTransactionType(TransactionType.NORMAL);
+		inventoryTransactionPacket.setTransactionType(InventoryTransactionType.NORMAL);
 		inventoryTransactionPacket.setActionType(0);//I have no idea
 		inventoryTransactionPacket.setRuntimeEntityId(TunnelMC.mc.player.getEntityId());
 
@@ -164,7 +164,7 @@ public class ClickSlotC2SPacketTranslator extends PacketTranslator<ClickSlotC2SP
 	public void onCursorStackAddToStack(ScreenHandler screenHandler, int clickedSlotId) {//for example the user has 64 oak planks in the cursor, and they right click a slot with oak planks(not an empty slot)
 		/*InventoryTransactionPacket inventoryTransactionPacket = new InventoryTransactionPacket();
 		
-		inventoryTransactionPacket.setTransactionType(TransactionType.NORMAL);
+		inventoryTransactionPacket.setTransactionType(InventoryTransactionType.NORMAL);
 		inventoryTransactionPacket.setActionType(0);//I have no idea
 		inventoryTransactionPacket.setRuntimeEntityId(TunnelMC.mc.player.getEntityId());
 		

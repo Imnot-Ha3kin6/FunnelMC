@@ -4,16 +4,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.mojang.authlib.GameProfile;
-import com.nukkitx.protocol.bedrock.packet.PlayerListPacket;
+import org.cloudburstmc.protocol.bedrock.packet.PlayerListPacket;
 
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.tunnelmc.mixins.interfaces.IMixinPlayerListS2CPacket;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
-import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket.Entry;
 import net.minecraft.text.LiteralText;
-import net.minecraft.util.Identifier;
-import net.minecraft.world.GameMode;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.GameType;
 
 public class PlayerListPacketTranslator extends PacketTranslator<PlayerListPacket> {
 

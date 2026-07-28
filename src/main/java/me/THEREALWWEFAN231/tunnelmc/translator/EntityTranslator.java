@@ -10,8 +10,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import me.THEREALWWEFAN231.tunnelmc.TunnelMC;
-import net.minecraft.entity.EntityType;
-import net.minecraft.util.registry.Registry;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.core.Registry;
 
 public class EntityTranslator {
 

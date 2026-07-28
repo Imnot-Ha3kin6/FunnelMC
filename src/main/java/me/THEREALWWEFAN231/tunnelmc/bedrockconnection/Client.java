@@ -8,11 +8,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.nukkitx.protocol.bedrock.BedrockClient;
-import com.nukkitx.protocol.bedrock.BedrockPacket;
-import com.nukkitx.protocol.bedrock.BedrockPacketCodec;
-import com.nukkitx.protocol.bedrock.BedrockSession;
-import com.nukkitx.protocol.bedrock.packet.LoginPacket;
-import com.nukkitx.protocol.bedrock.v431.Bedrock_v431;
+import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
+import org.cloudburstmc.protocol.bedrock.netty.codec.packet.BedrockPacketCodec;
+import org.cloudburstmc.protocol.bedrock.BedrockSession;
+import org.cloudburstmc.protocol.bedrock.packet.LoginPacket;
+import org.cloudburstmc.protocol.bedrock.codec.v431.Bedrock_v431;
 
 import io.netty.util.AsciiString;
 import me.THEREALWWEFAN231.tunnelmc.TunnelMC;
@@ -21,10 +21,10 @@ import me.THEREALWWEFAN231.tunnelmc.auth.SkinData;
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.caches.BlockEntityDataCache;
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.caches.container.BedrockContainers;
 import me.THEREALWWEFAN231.tunnelmc.javaconnection.FakeJavaConnection;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.DisconnectedScreen;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.DisconnectedScreen;
 import net.minecraft.client.util.NetworkUtils;
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
 
 public class Client {
 

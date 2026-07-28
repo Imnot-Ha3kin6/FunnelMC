@@ -1,17 +1,17 @@
 package me.THEREALWWEFAN231.tunnelmc.gui;
 
-import net.minecraft.client.gui.widget.CheckboxWidget;
+import net.minecraft.client.gui.components.Checkbox;
 import org.lwjgl.glfw.GLFW;
 
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screen.ScreenTexts;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.TranslatableText;
 

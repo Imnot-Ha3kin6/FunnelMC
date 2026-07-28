@@ -1,9 +1,9 @@
 package me.THEREALWWEFAN231.tunnelmc.translator.dimension;
 
 import me.THEREALWWEFAN231.tunnelmc.mixins.interfaces.IMixinDimensionType;
-import net.minecraft.util.registry.RegistryKey;
-import net.minecraft.world.World;
-import net.minecraft.world.dimension.DimensionType;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.dimension.DimensionType;
 
 public class DimensionTranslator {
 

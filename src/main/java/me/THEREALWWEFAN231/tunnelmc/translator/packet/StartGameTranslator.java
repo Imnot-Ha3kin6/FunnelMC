@@ -4,28 +4,28 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.nukkitx.protocol.bedrock.data.GameRuleData;
+import org.cloudburstmc.protocol.bedrock.data.GameRuleData;
 import com.nukkitx.protocol.bedrock.data.GameType;
-import com.nukkitx.protocol.bedrock.packet.RequestChunkRadiusPacket;
-import com.nukkitx.protocol.bedrock.packet.SetLocalPlayerAsInitializedPacket;
-import com.nukkitx.protocol.bedrock.packet.StartGamePacket;
+import org.cloudburstmc.protocol.bedrock.packet.RequestChunkRadiusPacket;
+import org.cloudburstmc.protocol.bedrock.packet.SetLocalPlayerAsInitializedPacket;
+import org.cloudburstmc.protocol.bedrock.packet.StartGamePacket;
 
-import com.nukkitx.protocol.bedrock.packet.TickSyncPacket;
+import org.cloudburstmc.protocol.bedrock.packet.TickSyncPacket;
 import me.THEREALWWEFAN231.tunnelmc.TunnelMC;
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
 import me.THEREALWWEFAN231.tunnelmc.translator.dimension.DimensionTranslator;
 import me.THEREALWWEFAN231.tunnelmc.translator.gamemode.GameModeTranslator;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.network.packet.s2c.play.ChunkRenderDistanceCenterS2CPacket;
-import net.minecraft.network.packet.s2c.play.GameJoinS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.registry.DynamicRegistryManager;
-import net.minecraft.util.registry.RegistryKey;
-import net.minecraft.world.GameMode;
-import net.minecraft.world.World;
-import net.minecraft.world.dimension.DimensionType;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.protocol.game.ClientboundSetChunkCacheCenterPacket;
+import net.minecraft.network.protocol.game.ClientboundLoginPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
+import net.minecraft.util.Mth;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.dimension.DimensionType;
 
 public class StartGameTranslator extends PacketTranslator<StartGamePacket> {
 

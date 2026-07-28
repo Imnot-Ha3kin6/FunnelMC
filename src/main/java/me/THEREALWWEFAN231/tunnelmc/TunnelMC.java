@@ -9,7 +9,7 @@ import me.THEREALWWEFAN231.tunnelmc.translator.container.screenhandler.ScreenHan
 import me.THEREALWWEFAN231.tunnelmc.translator.enchantment.EnchantmentTranslator;
 import me.THEREALWWEFAN231.tunnelmc.translator.item.ItemTranslator;
 import me.THEREALWWEFAN231.tunnelmc.utils.FileManagement;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 public class TunnelMC {
 

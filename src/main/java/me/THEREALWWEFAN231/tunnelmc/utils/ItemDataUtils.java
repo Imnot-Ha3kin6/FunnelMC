@@ -1,6 +1,6 @@
 package me.THEREALWWEFAN231.tunnelmc.utils;
 
-import com.nukkitx.protocol.bedrock.data.inventory.ItemData;
+import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
 
 public class ItemDataUtils {
 	

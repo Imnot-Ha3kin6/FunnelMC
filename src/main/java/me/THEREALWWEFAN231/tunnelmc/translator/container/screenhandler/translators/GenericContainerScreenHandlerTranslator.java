@@ -3,8 +3,8 @@ package me.THEREALWWEFAN231.tunnelmc.translator.container.screenhandler.translat
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.caches.container.BedrockContainer;
 import me.THEREALWWEFAN231.tunnelmc.translator.container.screenhandler.ScreenHandlerTranslator;
-import net.minecraft.screen.GenericContainerScreenHandler;
-import net.minecraft.screen.ScreenHandler;
+import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 
 public class GenericContainerScreenHandlerTranslator extends ScreenHandlerTranslator<GenericContainerScreenHandler> {
 

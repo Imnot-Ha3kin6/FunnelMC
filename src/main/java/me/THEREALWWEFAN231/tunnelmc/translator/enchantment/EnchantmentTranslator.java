@@ -2,14 +2,15 @@ package me.THEREALWWEFAN231.tunnelmc.translator.enchantment;
 
 import java.util.HashMap;
 
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.enchantment.Enchantments;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.Enchantments;
 
 //https://www.digminecraft.com/lists/enchantment_list_pe.php
 public class EnchantmentTranslator {
 
 	//bedrock enchantment ids and the java enchantment
-	public static final HashMap<Integer, Enchantment> BEDROCK_TO_JAVA_ENCHANTMENTS = new HashMap<Integer, Enchantment>();
+	public static final HashMap<Integer, ResourceKey<Enchantment>> BEDROCK_TO_JAVA_ENCHANTMENTS = new HashMap<Integer, ResourceKey<Enchantment>>();
 
 	public static void load() {
 

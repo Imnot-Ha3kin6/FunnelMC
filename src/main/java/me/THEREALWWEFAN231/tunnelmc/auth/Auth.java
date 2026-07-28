@@ -16,7 +16,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.nukkitx.protocol.bedrock.util.EncryptionUtils;
+import org.cloudburstmc.protocol.bedrock.util.EncryptionUtils;
 
 import me.THEREALWWEFAN231.tunnelmc.TunnelMC;
 

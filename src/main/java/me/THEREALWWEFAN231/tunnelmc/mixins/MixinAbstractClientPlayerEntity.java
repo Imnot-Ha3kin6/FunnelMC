@@ -6,8 +6,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.resources.Identifier;
 
 @Mixin(AbstractClientPlayerEntity.class)
 public class MixinAbstractClientPlayerEntity {

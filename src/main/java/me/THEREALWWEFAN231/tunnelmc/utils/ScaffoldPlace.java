@@ -1,14 +1,14 @@
 package me.THEREALWWEFAN231.tunnelmc.utils;
 
 import me.THEREALWWEFAN231.tunnelmc.TunnelMC;
-import net.minecraft.block.AirBlock;
-import net.minecraft.block.Block;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.level.block.AirBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 
 public class ScaffoldPlace {
 

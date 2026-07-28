@@ -7,9 +7,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import me.THEREALWWEFAN231.tunnelmc.TunnelMC;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.screen.slot.Slot;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.world.inventory.Slot;
 
 @Mixin(HandledScreen.class)
 public class MixinHandledScreen {//this was is is for testing purposes, renders the slot ids over slots, so we can visualize them, add to the mixin json if you want to see it

@@ -1,9 +1,9 @@
 package me.THEREALWWEFAN231.tunnelmc.javaconnection.packet.movement;
 
-import com.nukkitx.protocol.bedrock.packet.MovePlayerPacket;
+import org.cloudburstmc.protocol.bedrock.packet.MovePlayerPacket;
 
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket.Both;
 
 public class BothTranslator extends PacketTranslator<PlayerMoveC2SPacket.Both> {

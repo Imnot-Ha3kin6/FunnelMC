@@ -1,8 +1,8 @@
 package me.THEREALWWEFAN231.tunnelmc.translator.container.type;
 
-import com.nukkitx.protocol.bedrock.data.inventory.ContainerType;
+import org.cloudburstmc.protocol.bedrock.data.inventory.ContainerType;
 
-import net.minecraft.screen.ScreenHandlerType;
+import net.minecraft.world.inventory.MenuType;
 
 public class ContainerTypeTranslator {
 	

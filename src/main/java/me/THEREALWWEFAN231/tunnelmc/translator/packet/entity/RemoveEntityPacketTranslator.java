@@ -1,10 +1,10 @@
 package me.THEREALWWEFAN231.tunnelmc.translator.packet.entity;
 
-import com.nukkitx.protocol.bedrock.packet.RemoveEntityPacket;
+import org.cloudburstmc.protocol.bedrock.packet.RemoveEntityPacket;
 
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
-import net.minecraft.network.packet.s2c.play.EntitiesDestroyS2CPacket;
+import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 
 public class RemoveEntityPacketTranslator extends PacketTranslator<RemoveEntityPacket> {
 

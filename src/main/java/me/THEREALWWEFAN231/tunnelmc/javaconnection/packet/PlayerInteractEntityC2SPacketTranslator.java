@@ -1,15 +1,15 @@
 package me.THEREALWWEFAN231.tunnelmc.javaconnection.packet;
 
-import com.nukkitx.math.vector.Vector3f;
-import com.nukkitx.protocol.bedrock.data.inventory.ItemData;
-import com.nukkitx.protocol.bedrock.data.inventory.TransactionType;
-import com.nukkitx.protocol.bedrock.packet.InventoryTransactionPacket;
+import org.cloudburstmc.math.vector.Vector3f;
+import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
+import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.InventoryTransactionType;
+import org.cloudburstmc.protocol.bedrock.packet.InventoryTransactionPacket;
 
 import me.THEREALWWEFAN231.tunnelmc.TunnelMC;
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
-import net.minecraft.entity.EntityPose;
-import net.minecraft.network.packet.c2s.play.PlayerInteractEntityC2SPacket;
+import net.minecraft.world.entity.Pose;
+import net.minecraft.network.protocol.game.ServerboundInteractPacket;
 
 public class PlayerInteractEntityC2SPacketTranslator extends PacketTranslator<PlayerInteractEntityC2SPacket>{
 
@@ -19,7 +19,7 @@ public class PlayerInteractEntityC2SPacketTranslator extends PacketTranslator<Pl
 		ItemData holdingItem = Client.instance.containers.getPlayerInventory().getItemFromSlot(TunnelMC.mc.player.inventory.selectedSlot);
 		
 		InventoryTransactionPacket inventoryTransactionPacket = new InventoryTransactionPacket();
-		inventoryTransactionPacket.setTransactionType(TransactionType.ITEM_USE_ON_ENTITY);
+		inventoryTransactionPacket.setTransactionType(InventoryTransactionType.ITEM_USE_ON_ENTITY);
 		inventoryTransactionPacket.setActionType(1);
 		inventoryTransactionPacket.setRuntimeEntityId(packet.getEntity(TunnelMC.mc.world).getEntityId());
 		inventoryTransactionPacket.setHotbarSlot(TunnelMC.mc.player.inventory.selectedSlot);

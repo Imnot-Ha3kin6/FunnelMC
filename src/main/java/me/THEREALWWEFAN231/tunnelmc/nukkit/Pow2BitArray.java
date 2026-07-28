@@ -4,7 +4,7 @@ import java.util.Arrays;
 
 import com.google.common.base.Preconditions;
 
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.Mth;
 
 public class Pow2BitArray implements BitArray {
 

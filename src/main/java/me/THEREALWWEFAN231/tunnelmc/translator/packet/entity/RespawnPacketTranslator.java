@@ -1,18 +1,18 @@
 package me.THEREALWWEFAN231.tunnelmc.translator.packet.entity;
 
-import com.nukkitx.math.vector.Vector3i;
-import com.nukkitx.protocol.bedrock.data.PlayerActionType;
-import com.nukkitx.protocol.bedrock.packet.PlayerActionPacket;
-import com.nukkitx.protocol.bedrock.packet.RespawnPacket;
+import org.cloudburstmc.math.vector.Vector3i;
+import org.cloudburstmc.protocol.bedrock.data.PlayerActionType;
+import org.cloudburstmc.protocol.bedrock.packet.PlayerActionPacket;
+import org.cloudburstmc.protocol.bedrock.packet.RespawnPacket;
 import com.nukkitx.protocol.bedrock.packet.RespawnPacket.State;
 
 import me.THEREALWWEFAN231.tunnelmc.TunnelMC;
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.tunnelmc.mixins.interfaces.IMixinDimensionType;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
-import net.minecraft.network.packet.s2c.play.PlayerRespawnS2CPacket;
-import net.minecraft.world.GameMode;
-import net.minecraft.world.World;
+import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.Level;
 
 public class RespawnPacketTranslator extends PacketTranslator<RespawnPacket> {
 

@@ -3,7 +3,7 @@ package me.THEREALWWEFAN231.tunnelmc.mixins.interfaces;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-import net.minecraft.network.packet.s2c.play.EntityPositionS2CPacket;
+import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
 
 @Mixin(EntityPositionS2CPacket.class)
 public interface IMixinEntityPositionS2CPacket {

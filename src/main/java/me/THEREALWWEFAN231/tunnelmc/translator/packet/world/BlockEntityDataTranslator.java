@@ -1,13 +1,13 @@
 package me.THEREALWWEFAN231.tunnelmc.translator.packet.world;
 
-import com.nukkitx.protocol.bedrock.packet.BlockEntityDataPacket;
+import org.cloudburstmc.protocol.bedrock.packet.BlockEntityDataPacket;
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
 import me.THEREALWWEFAN231.tunnelmc.translator.blockentity.BlockEntityRegistry;
 import me.THEREALWWEFAN231.tunnelmc.translator.blockentity.BlockEntityTranslator;
 import me.THEREALWWEFAN231.tunnelmc.utils.PositionUtil;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 
 public class BlockEntityDataTranslator extends PacketTranslator<BlockEntityDataPacket> {
     @Override

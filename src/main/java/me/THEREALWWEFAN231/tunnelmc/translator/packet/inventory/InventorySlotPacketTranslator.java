@@ -1,6 +1,6 @@
 package me.THEREALWWEFAN231.tunnelmc.translator.packet.inventory;
 
-import com.nukkitx.protocol.bedrock.packet.InventorySlotPacket;
+import org.cloudburstmc.protocol.bedrock.packet.InventorySlotPacket;
 
 import me.THEREALWWEFAN231.tunnelmc.TunnelMC;
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
@@ -8,8 +8,8 @@ import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.caches.container.BedrockCo
 import me.THEREALWWEFAN231.tunnelmc.javaconnection.packet.UpdateSelectedSlotC2SPacketTranslator;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
 import me.THEREALWWEFAN231.tunnelmc.translator.item.ItemTranslator;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.packet.s2c.play.ScreenHandlerSlotUpdateS2CPacket;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
 
 public class InventorySlotPacketTranslator extends PacketTranslator<InventorySlotPacket> {
 

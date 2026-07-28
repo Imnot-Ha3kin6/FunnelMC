@@ -1,11 +1,11 @@
 package me.THEREALWWEFAN231.tunnelmc.translator.packet;
 
-import com.nukkitx.protocol.bedrock.packet.UpdatePlayerGameTypePacket;
+import org.cloudburstmc.protocol.bedrock.packet.UpdatePlayerGameTypePacket;
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
 import me.THEREALWWEFAN231.tunnelmc.translator.gamemode.GameModeTranslator;
-import net.minecraft.network.packet.s2c.play.GameStateChangeS2CPacket;
-import net.minecraft.world.GameMode;
+import net.minecraft.network.protocol.game.ClientboundGameEventPacket;
+import net.minecraft.world.level.GameType;
 
 public class UpdatePlayerGameTypeTranslator extends PacketTranslator<UpdatePlayerGameTypePacket> {
     @Override

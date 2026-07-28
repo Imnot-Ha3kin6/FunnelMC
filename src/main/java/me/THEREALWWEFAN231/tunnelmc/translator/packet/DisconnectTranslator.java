@@ -1,10 +1,10 @@
 package me.THEREALWWEFAN231.tunnelmc.translator.packet;
 
-import com.nukkitx.protocol.bedrock.packet.DisconnectPacket;
+import org.cloudburstmc.protocol.bedrock.packet.DisconnectPacket;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.DisconnectedScreen;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.DisconnectedScreen;
+import net.minecraft.network.chat.Component;
 
 public class DisconnectTranslator extends PacketTranslator<DisconnectPacket> {
     @Override

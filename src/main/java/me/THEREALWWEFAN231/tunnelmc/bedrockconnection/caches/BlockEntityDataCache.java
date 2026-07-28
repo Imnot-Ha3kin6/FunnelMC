@@ -2,8 +2,8 @@ package me.THEREALWWEFAN231.tunnelmc.bedrockconnection.caches;
 
 import java.util.HashMap;
 
-import com.nukkitx.math.vector.Vector3i;
-import com.nukkitx.nbt.NbtMap;
+import org.cloudburstmc.math.vector.Vector3i;
+import org.cloudburstmc.nbt.NbtMap;
 
 public class BlockEntityDataCache {
 	

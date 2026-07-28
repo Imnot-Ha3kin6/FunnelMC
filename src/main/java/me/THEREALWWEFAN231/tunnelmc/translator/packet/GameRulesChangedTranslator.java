@@ -1,10 +1,10 @@
 package me.THEREALWWEFAN231.tunnelmc.translator.packet;
 
-import com.nukkitx.protocol.bedrock.data.GameRuleData;
-import com.nukkitx.protocol.bedrock.packet.GameRulesChangedPacket;
+import org.cloudburstmc.protocol.bedrock.data.GameRuleData;
+import org.cloudburstmc.protocol.bedrock.packet.GameRulesChangedPacket;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.world.GameRules;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.level.gamerules.GameRules;
 
 import java.util.List;
 

@@ -9,7 +9,7 @@ import me.THEREALWWEFAN231.tunnelmc.javaconnection.packet.movement.LookOnlyTrans
 import me.THEREALWWEFAN231.tunnelmc.javaconnection.packet.movement.PlayerMoveTranslator;
 import me.THEREALWWEFAN231.tunnelmc.javaconnection.packet.movement.PositionOnlyTranslator;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
-import net.minecraft.network.Packet;
+import net.minecraft.network.protocol.Packet;
 
 public class JavaPacketTranslatorManager {
 

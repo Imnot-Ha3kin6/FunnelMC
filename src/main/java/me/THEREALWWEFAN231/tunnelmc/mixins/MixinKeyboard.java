@@ -6,9 +6,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import net.minecraft.client.Keyboard;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.util.InputUtil;
+import net.minecraft.client.KeyboardHandler;
+import net.minecraft.client.Minecraft;
+import com.mojang.blaze3d.platform.InputConstants;
 
 @Mixin(value = Keyboard.class, priority = 9999)
 public class MixinKeyboard {

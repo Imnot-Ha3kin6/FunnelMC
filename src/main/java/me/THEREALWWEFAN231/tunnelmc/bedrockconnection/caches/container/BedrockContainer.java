@@ -2,7 +2,7 @@ package me.THEREALWWEFAN231.tunnelmc.bedrockconnection.caches.container;
 
 import java.util.ArrayList;
 
-import com.nukkitx.protocol.bedrock.data.inventory.ItemData;
+import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
 
 public class BedrockContainer {
 

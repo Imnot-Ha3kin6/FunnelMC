@@ -1,6 +1,6 @@
 package me.THEREALWWEFAN231.tunnelmc.translator.blockentity;
 
-import com.nukkitx.nbt.NbtMap;
+import org.cloudburstmc.nbt.NbtMap;
 
 import java.util.HashMap;
 import java.util.Map;

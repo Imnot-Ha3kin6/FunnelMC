@@ -1,11 +1,11 @@
 package me.THEREALWWEFAN231.tunnelmc.translator.packet;
 
-import com.nukkitx.protocol.bedrock.data.AdventureSetting;
-import com.nukkitx.protocol.bedrock.packet.AdventureSettingsPacket;
+import org.cloudburstmc.protocol.bedrock.data.AdventureSetting;
+import org.cloudburstmc.protocol.bedrock.packet.AdventureSettingsPacket;
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
-import net.minecraft.entity.player.PlayerAbilities;
-import net.minecraft.network.packet.s2c.play.PlayerAbilitiesS2CPacket;
+import net.minecraft.world.entity.player.Abilities;
+import net.minecraft.network.protocol.game.ClientboundPlayerAbilitiesPacket;
 
 public class AdventureSettingsTranslator extends PacketTranslator<AdventureSettingsPacket> {
     @Override

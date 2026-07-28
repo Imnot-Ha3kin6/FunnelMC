@@ -1,13 +1,13 @@
 package me.THEREALWWEFAN231.tunnelmc.javaconnection.packet;
 
-import com.nukkitx.protocol.bedrock.data.command.CommandOriginData;
-import com.nukkitx.protocol.bedrock.data.command.CommandOriginType;
-import com.nukkitx.protocol.bedrock.packet.CommandRequestPacket;
-import com.nukkitx.protocol.bedrock.packet.TextPacket;
+import org.cloudburstmc.protocol.bedrock.data.command.CommandOriginData;
+import org.cloudburstmc.protocol.bedrock.data.command.CommandOriginType;
+import org.cloudburstmc.protocol.bedrock.packet.CommandRequestPacket;
+import org.cloudburstmc.protocol.bedrock.packet.TextPacket;
 
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
-import net.minecraft.network.packet.c2s.play.ChatMessageC2SPacket;
+import net.minecraft.network.protocol.game.ServerboundChatPacket;
 
 public class ChatMessageC2SPacketTranslator extends PacketTranslator<ChatMessageC2SPacket> {
 

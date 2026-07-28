@@ -1,13 +1,13 @@
 package me.THEREALWWEFAN231.tunnelmc.javaconnection.packet.movement;
 
-import com.nukkitx.math.vector.Vector3f;
-import com.nukkitx.protocol.bedrock.packet.MovePlayerPacket;
+import org.cloudburstmc.math.vector.Vector3f;
+import org.cloudburstmc.protocol.bedrock.packet.MovePlayerPacket;
 
 import me.THEREALWWEFAN231.tunnelmc.TunnelMC;
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
-import net.minecraft.entity.EntityPose;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
+import net.minecraft.world.entity.Pose;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 
 public class PlayerMoveTranslator extends PacketTranslator<PlayerMoveC2SPacket> {
 

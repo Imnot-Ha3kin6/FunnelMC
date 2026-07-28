@@ -1,20 +1,20 @@
 package me.THEREALWWEFAN231.tunnelmc.javaconnection.packet;
 
-import com.nukkitx.math.vector.Vector3f;
-import com.nukkitx.math.vector.Vector3i;
-import com.nukkitx.protocol.bedrock.data.inventory.ItemData;
-import com.nukkitx.protocol.bedrock.data.inventory.TransactionType;
-import com.nukkitx.protocol.bedrock.packet.InventoryTransactionPacket;
+import org.cloudburstmc.math.vector.Vector3f;
+import org.cloudburstmc.math.vector.Vector3i;
+import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
+import org.cloudburstmc.protocol.bedrock.data.inventory.transaction.InventoryTransactionType;
+import org.cloudburstmc.protocol.bedrock.packet.InventoryTransactionPacket;
 
 import me.THEREALWWEFAN231.tunnelmc.TunnelMC;
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
-import net.minecraft.entity.EntityPose;
-import net.minecraft.network.packet.c2s.play.PlayerInteractItemC2SPacket;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.entity.Pose;
+import net.minecraft.network.protocol.game.ServerboundUseItemPacket;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
 
 public class PlayerInteractItemC2SPacketTranslator extends PacketTranslator<PlayerInteractItemC2SPacket> {
 
@@ -33,7 +33,7 @@ public class PlayerInteractItemC2SPacketTranslator extends PacketTranslator<Play
 			Vec3d sideHitOffset = ((BlockHitResult) TunnelMC.mc.crosshairTarget).getPos().subtract(blockPos.getX(), blockPos.getY(), blockPos.getZ());
 
 			InventoryTransactionPacket useInventoryTransactionPacket = new InventoryTransactionPacket();
-			useInventoryTransactionPacket.setTransactionType(TransactionType.ITEM_USE);
+			useInventoryTransactionPacket.setTransactionType(InventoryTransactionType.ITEM_USE);
 			useInventoryTransactionPacket.setActionType(0);
 			useInventoryTransactionPacket.setBlockPosition(blockPosition);
 			useInventoryTransactionPacket.setBlockFace(((BlockHitResult) TunnelMC.mc.crosshairTarget).getSide().ordinal());
@@ -48,7 +48,7 @@ public class PlayerInteractItemC2SPacketTranslator extends PacketTranslator<Play
 			//they used the item in air
 
 			InventoryTransactionPacket inventoryTransactionPacket = new InventoryTransactionPacket();
-			inventoryTransactionPacket.setTransactionType(TransactionType.ITEM_USE);
+			inventoryTransactionPacket.setTransactionType(InventoryTransactionType.ITEM_USE);
 			inventoryTransactionPacket.setActionType(1);
 			inventoryTransactionPacket.setBlockPosition(Vector3i.ZERO);
 			inventoryTransactionPacket.setBlockFace(255);
