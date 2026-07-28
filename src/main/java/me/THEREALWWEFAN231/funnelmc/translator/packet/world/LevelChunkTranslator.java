@@ -110,9 +110,14 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 			byte storageSize = chunkVersion == 1 ? 1 : byteBuf.readByte();
 
 			for (int storageReadIndex = 0; storageReadIndex < storageSize; storageReadIndex++) {
-				byte paletteHeader = byteBuf.readByte();
+				// paletteHeader must be treated as unsigned here - readByte() gives a signed byte,
+				// and >> on a byte widened to int is an arithmetic (sign-preserving) shift, so any
+				// header with bit 7 set previously produced a negative paletteVersion instead of the
+				// real bits-per-entry value, which BitArrayVersion.get() then rejected (or worse,
+				// matched nothing/threw), leaving the rest of this section's reads misaligned.
+				int paletteHeader = byteBuf.readByte() & 0xFF;
 				boolean isRuntime = (paletteHeader & 1) == 1;
-				int paletteVersion = (paletteHeader | 1) >> 1;
+				int paletteVersion = paletteHeader >> 1;
 
 				BitArrayVersion bitArrayVersion = BitArrayVersion.get(paletteVersion, true);
 
