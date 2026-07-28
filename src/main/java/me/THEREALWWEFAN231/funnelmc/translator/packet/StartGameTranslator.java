@@ -91,6 +91,7 @@ public class StartGameTranslator extends PacketTranslator<StartGamePacket> {
 		Client.instance.javaConnection.processServerToClientPacket(
 				new ClientboundGameEventPacket(ClientboundGameEventPacket.LEVEL_CHUNKS_LOAD_START, 0));
 		logger.warn("Sent LEVEL_CHUNKS_LOAD_START");
+		me.THEREALWWEFAN231.funnelmc.debug.LoadTrackerDiagnostics.logState("immediately-after-send");
 
 		//TODO send a complete tag sync packet - that way water can work
 

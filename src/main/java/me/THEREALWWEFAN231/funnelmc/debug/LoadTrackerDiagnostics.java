@@ -10,9 +10,9 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 
 // Temporary instrumentation for the "stuck on Loading Terrain" investigation - reflectively dumps
-// ClientPacketListener's private levelLoadTracker state once a second so we can see which of
-// LevelLoadTracker's three states (WaitingForServer / WaitingForPlayerChunk / ClientLevelReady) the
-// vanilla dismissal logic is actually stuck in, instead of guessing from outside.
+// ClientPacketListener's private levelLoadTracker state so we can see which of LevelLoadTracker's
+// three states (WaitingForServer / WaitingForPlayerChunk / ClientLevelReady) the vanilla dismissal
+// logic is actually stuck in, instead of guessing from outside.
 //
 // Deliberately hooked to Fabric API's END_CLIENT_TICK rather than this mod's own EventPlayerTick:
 // EventPlayerTick is fired from a mixin into LocalPlayer.tick(), but that method's entire body -
@@ -36,11 +36,17 @@ public class LoadTrackerDiagnostics {
 		if (this.tickCounter % 20 != 0) {
 			return;
 		}
+		logState("periodic");
+	}
 
+	// Also called directly from StartGameTranslator right after it sends LEVEL_CHUNKS_LOAD_START, to
+	// see whether the WaitingForServer -> WaitingForPlayerChunk transition happens synchronously as
+	// vanilla's own handleGameEvent() code implies it should, or whether it never happens at all.
+	public static void logState(String context) {
 		try {
 			ClientPacketListener connection = FunnelMC.mc.getConnection();
 			if (connection == null) {
-				logger.warn("[LoadTrackerDiag] Minecraft.getConnection() is null");
+				logger.warn("[LoadTrackerDiag:{}] Minecraft.getConnection() is null", context);
 				return;
 			}
 
@@ -49,7 +55,7 @@ public class LoadTrackerDiagnostics {
 			Object levelLoadTracker = levelLoadTrackerField.get(connection);
 
 			if (levelLoadTracker == null) {
-				logger.warn("[LoadTrackerDiag] levelLoadTracker is null (already cleared - level should be ready)");
+				logger.warn("[LoadTrackerDiag:{}] levelLoadTracker is null (already cleared - level should be ready)", context);
 				return;
 			}
 
@@ -58,7 +64,7 @@ public class LoadTrackerDiagnostics {
 			Object clientState = clientStateField.get(levelLoadTracker);
 
 			if (clientState == null) {
-				logger.warn("[LoadTrackerDiag] clientState is null");
+				logger.warn("[LoadTrackerDiag:{}] clientState is null", context);
 				return;
 			}
 
@@ -68,16 +74,17 @@ public class LoadTrackerDiagnostics {
 				Field playerSectionReadyField = clientState.getClass().getDeclaredField("playerSectionReady");
 				playerSectionReadyField.setAccessible(true);
 				Object playerSectionReady = playerSectionReadyField.get(clientState);
-				logger.warn("[LoadTrackerDiag] state=WaitingForPlayerChunk playerSectionReady={} playerPos={} cameraBlockPos={}",
+				logger.warn("[LoadTrackerDiag:{}] state=WaitingForPlayerChunk playerSectionReady={} playerPos={} cameraBlockPos={}",
+						context,
 						playerSectionReady,
 						FunnelMC.mc.player != null ? FunnelMC.mc.player.blockPosition() : "null",
 						FunnelMC.mc.gameRenderer != null ? FunnelMC.mc.gameRenderer.mainCamera().blockPosition() : "null");
 			} else {
-				logger.warn("[LoadTrackerDiag] state={} playerPos={}", stateClassName,
+				logger.warn("[LoadTrackerDiag:{}] state={} playerPos={}", context, stateClassName,
 						FunnelMC.mc.player != null ? FunnelMC.mc.player.blockPosition() : "null");
 			}
 		} catch (Exception e) {
-			logger.error("[LoadTrackerDiag] Failed to inspect levelLoadTracker", e);
+			logger.error("[LoadTrackerDiag:{}] Failed to inspect levelLoadTracker", context, e);
 		}
 	}
 
