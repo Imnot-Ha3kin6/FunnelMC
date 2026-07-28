@@ -119,6 +119,27 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 				boolean isRuntime = (paletteHeader & 1) == 1;
 				int paletteVersion = paletteHeader >> 1;
 
+				// bits-per-block of 0 is Bedrock's "single value" encoding: every block in this
+				// storage layer is the same one palette entry, so there's no bit array of indices
+				// on the wire at all - just the palette itself (always exactly one entry). Treating
+				// this as a normal BitArrayVersion was throwing "Invalid palette version: 0" and,
+				// worse, leaving the palette bytes unread and every subsequent read in the packet
+				// misaligned.
+				if (paletteVersion == 0) {
+					int[] singleValuePalette = readPalette(byteBuf, isRuntime, 1);
+					if (storageReadIndex == 0 && singleValuePalette[0] != BlockPaletteTranslator.AIR_BEDROCK_BLOCK_ID) {
+						BlockState blockState = BlockPaletteTranslator.RUNTIME_ID_TO_BLOCK_STATE.get(singleValuePalette[0]);
+						for (int x = 0; x < 16; x++) {
+							for (int z = 0; z < 16; z++) {
+								for (int y = 0; y < 16; y++) {
+									chunkSections[sectionIndex].setBlockState(x, y, z, blockState);
+								}
+							}
+						}
+					}
+					continue;
+				}
+
 				BitArrayVersion bitArrayVersion = BitArrayVersion.get(paletteVersion, true);
 
 				int maxBlocksInSection = 4096; // 16*16*16
@@ -131,22 +152,7 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 				}
 
 				int paletteSize = VarInts.readInt(byteBuf);
-				int[] sectionPalette = new int[paletteSize];
-				NBTInputStream nbtStream = isRuntime ? null : new NBTInputStream(new NetworkDataInputStream(new ByteBufInputStream(byteBuf)));
-				for (int i = 0; i < paletteSize; i++) {
-					if (isRuntime) {
-						sectionPalette[i] = VarInts.readInt(byteBuf);
-					} else {
-						try {
-							NbtMapBuilder map = ((NbtMap) nbtStream.readTag()).toBuilder();
-							// For some reason, persistent chunks don't include the "minecraft:" that should be used in state names.
-							map.replace("name", "minecraft:" + map.get("name").toString());
-							sectionPalette[i] = BlockPaletteTranslator.getBedrockBlockId(BlockPaletteTranslator.bedrockStateFromNBTMap(map.build()));
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-					}
-				}
+				int[] sectionPalette = readPalette(byteBuf, isRuntime, paletteSize);
 
 				if (storageReadIndex == 0) {
 					int index = 0;
@@ -196,6 +202,26 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 		this.logger.warn("Translated+sent chunk ({}, {}): bedrock subChunksLength={}, java worldChunk sections={} (level minY={}, height={})",
 				chunkX, chunkZ, packet.getSubChunksLength(), sections.length,
 				FunnelMC.mc.level.getMinY(), FunnelMC.mc.level.getHeight());
+	}
+
+	private int[] readPalette(ByteBuf byteBuf, boolean isRuntime, int paletteSize) {
+		int[] palette = new int[paletteSize];
+		NBTInputStream nbtStream = isRuntime ? null : new NBTInputStream(new NetworkDataInputStream(new ByteBufInputStream(byteBuf)));
+		for (int i = 0; i < paletteSize; i++) {
+			if (isRuntime) {
+				palette[i] = VarInts.readInt(byteBuf);
+			} else {
+				try {
+					NbtMapBuilder map = ((NbtMap) nbtStream.readTag()).toBuilder();
+					// For some reason, persistent chunks don't include the "minecraft:" that should be used in state names.
+					map.replace("name", "minecraft:" + map.get("name").toString());
+					palette[i] = BlockPaletteTranslator.getBedrockBlockId(BlockPaletteTranslator.bedrockStateFromNBTMap(map.build()));
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		return palette;
 	}
 
 	/**
