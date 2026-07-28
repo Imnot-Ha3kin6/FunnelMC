@@ -102,6 +102,21 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 		for (int sectionIndex = 0; sectionIndex < packet.getSubChunksLength(); sectionIndex++) {
 			chunkSections[sectionIndex] = new LevelChunkSection(FunnelMC.mc.level.palettedContainerFactory());
 			int chunkVersion = byteBuf.readByte();
+
+			// Version 9 is the extended-height subchunk format (introduced alongside the -64..320
+			// world height range) - unlike version 8, sections aren't guaranteed contiguous from Y=0
+			// anymore, so the server prefixes each section with a signed Y index byte before the
+			// same storage-layer data version 8 uses. Not consuming that byte here was routing every
+			// version-9 section into manage0VersionChunk (the legacy PocketMine fixed-layout path,
+			// unrelated to this format), which reads a fixed 6144 bytes regardless of what's
+			// actually there - corrupting the read cursor for every section after it in the same
+			// packet, which is why the fallout showed up as wildly different-looking errors
+			// (garbage palette versions, buffer overruns, bad NBT tag types) across many chunks.
+			if (chunkVersion == 9) {
+				byteBuf.readByte(); // section Y index - unused here, sectionIndex already tracks position
+				chunkVersion = 8;
+			}
+
 			if (chunkVersion != 1 && chunkVersion != 8) {
 				manage0VersionChunk(byteBuf, chunkSections[sectionIndex]);
 				continue;
@@ -272,7 +287,16 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 				continue;
 			}
 
-			this.translate(levelChunkPacket);
+			try {
+				this.translate(levelChunkPacket);
+			} catch (Exception e) {
+				// A chunk that throws here would otherwise stay in this list forever and get
+				// retried (and rethrow) every single tick, flooding the log with duplicates of the
+				// same failure instead of surfacing it once. Drop it either way - retrying a chunk
+				// whose translate() already failed isn't going to make it succeed next tick.
+				this.logger.error("Failed to translate out-of-render-distance chunk ({}, {})",
+						levelChunkPacket.getChunkX(), levelChunkPacket.getChunkZ(), e);
+			}
 			this.chunksOutOfRenderDistance.remove(i);
 			i--;
 		}
