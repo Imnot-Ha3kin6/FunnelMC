@@ -1,5 +1,6 @@
 package me.THEREALWWEFAN231.funnelmc.javaconnection;
 
+import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.UUID;
 
@@ -57,6 +58,28 @@ public class FakeJavaConnection {
 		CommonListenerCookie cookie = new CommonListenerCookie(null, gameProfile, telemetryManager, registryAccess, FeatureFlags.VANILLA_SET, "funnelmc",
 				null, null, Collections.emptyMap(), null, Collections.emptyMap(), ServerLinks.EMPTY, Collections.emptyMap(), false);
 		this.clientPacketListener = new ClientPacketListener(FunnelMC.mc, this.connection, cookie);
+		// Constructing ClientPacketListener is not enough on its own - Connection.tick() only drives
+		// whichever listener was registered as Connection's private packetListener field, which nothing
+		// here was ever setting. Without this, Connection.tick()'s
+		// "if (this.packetListener instanceof TickablePacketListener tickable) tickable.tick();" check
+		// silently never fires - meaning ClientPacketListener.tick() (which drives
+		// LevelLoadTracker.tickClientLoad(), the "Loading terrain" screen's actual dismissal logic)
+		// never runs at all, regardless of how correct the state machine logic itself is.
+		//
+		// Real vanilla wires this via Connection.setupInboundProtocol(), but that method also replaces
+		// a "decoder" pipeline stage and writes a config message through the channel - real machinery
+		// for a real Netty pipeline with real encoder/decoder stages, none of which our bare
+		// EmbeddedChannel(this.connection) has (we bypass the pipeline entirely already, handling
+		// packets directly via processServerToClientPacket() below). Setting the field directly via
+		// reflection gets the one effect we actually need without risking an exception from pipeline
+		// surgery that has nothing to operate on.
+		try {
+			Field packetListenerField = Connection.class.getDeclaredField("packetListener");
+			packetListenerField.setAccessible(true);
+			packetListenerField.set(this.connection, this.clientPacketListener);
+		} catch (ReflectiveOperationException e) {
+			throw new RuntimeException("Failed to wire ClientPacketListener into Connection.packetListener", e);
+		}
 		this.packetTranslatorManager = new JavaPacketTranslatorManager();
 	}
 
