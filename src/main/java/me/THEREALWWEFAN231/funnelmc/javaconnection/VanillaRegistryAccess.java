@@ -1,31 +1,38 @@
 package me.THEREALWWEFAN231.funnelmc.javaconnection;
 
-import java.util.ArrayList;
 import java.util.List;
 
-import com.mojang.serialization.Lifecycle;
-
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.MappedRegistry;
+import net.minecraft.core.LayeredRegistryAccess;
 import net.minecraft.core.Registry;
-import net.minecraft.core.RegistrationInfo;
 import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.data.registries.VanillaRegistries;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.RegistryDataLoader;
+import net.minecraft.server.RegistryLayer;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.tags.TagLoader;
 
 // There's no real Java server here to send the registry-sync packets (ClientboundRegistryDataPacket)
 // a vanilla client would normally get before login, and ClientPacketListener's constructor and
 // ClientLevel both hard-require dynamic registries like worldgen/biome and worldgen/dimension_type
 // to actually be present (not just the static/built-in item/block/etc layer ClientRegistryLayer.STATIC
-// provides). This rebuilds what those packets would have populated, straight from vanilla's bundled
-// default data via VanillaRegistries' in-memory datagen bootstrap - the same data a real Java server
-// with no datapacks would have sent.
+// provides) - with their tags genuinely bound, not just their elements.
 //
-// VanillaRegistries.createLookup() only hands back lightweight HolderLookup facades for the registries
-// it bootstraps (not real Registry instances - RegistrySetBuilder doesn't build one), but
-// RegistryAccess#lookupOrThrow requires an actual Registry, so each dynamic registry is copied into a
-// real frozen MappedRegistry below.
+// An earlier version of this built worldgen registries from VanillaRegistries.createLookup(), the
+// same in-memory bootstrap the game's own datagen tooling uses to dump default registry JSON at build
+// time. That bootstrap is deliberately incapable of real tag resolution (see
+// RegistrySetBuilder.EmptyTagLookup#get(TagKey) - always returns HolderSet.emptyNamed(...), a
+// placeholder whose contents() unconditionally throws "can't be dereferenced during construction").
+// Any bootstrapped value that captures a tag reference internally (e.g. DimensionType.timelines(),
+// used by ClientLevel's EnvironmentAttributeSystem on every login) carries that poisoned reference
+// forever, so it crashes the instant real gameplay code dereferences it - regardless of anything done
+// to the registry afterward, since the reference is baked into the value at bootstrap time.
+//
+// So this instead runs the same real JSON-registry-loading pipeline WorldLoader uses to build a
+// server's (or a singleplayer world's) registries at startup - RegistryDataLoader for elements plus
+// TagLoader for real tag bindings - just pointed at the client's own ResourceManager instead of a
+// server datapack. The client jar already bundles the same data/minecraft/... registry and tag JSON a
+// vanilla server would ship, since it needs it for singleplayer/LAN worlds anyway.
 public class VanillaRegistryAccess {
 
 	private static RegistryAccess.Frozen instance;
@@ -38,30 +45,24 @@ public class VanillaRegistryAccess {
 	}
 
 	private static RegistryAccess.Frozen build() {
-		RegistryAccess.Frozen staticAccess = RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY);
-		HolderLookup.Provider vanillaLookup = VanillaRegistries.createLookup();
+		ResourceManager resourceManager = Minecraft.getInstance().getResourceManager();
 
-		List<Registry<?>> registries = new ArrayList<>();
-		staticAccess.registries().forEach(entry -> registries.add(entry.value()));
+		LayeredRegistryAccess<RegistryLayer> layers = RegistryLayer.createRegistryAccess();
+		List<Registry.PendingTags<?>> staticTags = TagLoader.loadTagsForExistingRegistries(resourceManager, layers.getLayer(RegistryLayer.STATIC));
 
-		vanillaLookup.listRegistryKeys().forEach(key -> {
-			if (staticAccess.lookup(key).isPresent()) {
-				return;
-			}
-			registries.add(toRegistry(key, vanillaLookup));
-		});
+		RegistryAccess.Frozen worldgenLoadContext = layers.getAccessForLoading(RegistryLayer.WORLDGEN);
+		List<HolderLookup.RegistryLookup<?>> worldgenContextRegistries = TagLoader.buildUpdatedLookups(worldgenLoadContext, staticTags);
 
-		return new RegistryAccess.ImmutableRegistryAccess(registries).freeze();
-	}
+		RegistryAccess.Frozen worldgenRegistries = RegistryDataLoader
+				.load(resourceManager, worldgenContextRegistries, RegistryDataLoader.WORLDGEN_REGISTRIES, Runnable::run)
+				.join();
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private static <T> Registry<T> toRegistry(ResourceKey<? extends Registry<?>> key, HolderLookup.Provider provider) {
-		ResourceKey<Registry<T>> registryKey = (ResourceKey<Registry<T>>) (ResourceKey<?>) key;
-		HolderLookup.RegistryLookup<T> lookup = (HolderLookup.RegistryLookup<T>) provider.lookupOrThrow((ResourceKey) key);
+		// Same ordering WorldLoader.load uses: only commit the real static-layer tags (item/block/
+		// entity_type/... tags, shared with the rest of the running client) once the worldgen load that
+		// referenced their patched-but-not-yet-applied view has actually succeeded.
+		staticTags.forEach(Registry.PendingTags::apply);
 
-		MappedRegistry<T> registry = new MappedRegistry<>(registryKey, Lifecycle.stable());
-		lookup.listElements().forEach(holder -> registry.register(holder.key(), holder.value(), RegistrationInfo.BUILT_IN));
-		return registry.freeze();
+		return layers.replaceFrom(RegistryLayer.WORLDGEN, worldgenRegistries).compositeAccess();
 	}
 
 }
