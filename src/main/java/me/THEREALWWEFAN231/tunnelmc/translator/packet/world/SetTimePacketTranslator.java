@@ -1,5 +1,7 @@
 package me.THEREALWWEFAN231.tunnelmc.translator.packet.world;
 
+import java.util.Collections;
+
 import org.cloudburstmc.protocol.bedrock.packet.SetTimePacket;
 
 import me.THEREALWWEFAN231.tunnelmc.TunnelMC;
@@ -11,18 +13,22 @@ public class SetTimePacketTranslator extends PacketTranslator<SetTimePacket> {
 
 	@Override
 	public void translate(SetTimePacket packet) {
-		WorldTimeUpdateS2CPacket worldTimeUpdateS2CPacket = new WorldTimeUpdateS2CPacket(packet.getTime(), packet.getTime(), true);//TODO: remove true and replace it with the gamerule
-		Client.instance.javaConnection.processServerToClientPacket(worldTimeUpdateS2CPacket);
+		// TODO: the old (long gameTime, long dayTime, boolean doDaylightCycle) signature is gone -
+		// modern MC drives day/night via a WorldClock registry (part of the same environment
+		// attribute system as DimensionType, see DimensionTranslator TODO), passed here as a
+		// Map<Holder<WorldClock>, ClockNetworkState> we don't have real data for yet.
+		ClientboundSetTimePacket clientboundSetTimePacket = new ClientboundSetTimePacket(packet.getTime(), Collections.emptyMap());
+		Client.instance.javaConnection.processServerToClientPacket(clientboundSetTimePacket);
 	}
 
 	@Override
 	public Class<?> getPacketClass() {
 		return SetTimePacket.class;
 	}
-	
+
 	@Override
 	public boolean idleUntil() {
-		return TunnelMC.mc.world != null;
+		return TunnelMC.mc.level != null;
 	}
 
 }

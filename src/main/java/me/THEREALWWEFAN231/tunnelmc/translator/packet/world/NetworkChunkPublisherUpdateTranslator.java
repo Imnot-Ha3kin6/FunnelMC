@@ -10,7 +10,7 @@ public class NetworkChunkPublisherUpdateTranslator extends PacketTranslator<Netw
 
     @Override
     public void translate(NetworkChunkPublisherUpdatePacket packet) {
-        ChunkRenderDistanceCenterS2CPacket renderDistanceCenterPacket = new ChunkRenderDistanceCenterS2CPacket(
+        ClientboundSetChunkCacheCenterPacket renderDistanceCenterPacket = new ClientboundSetChunkCacheCenterPacket(
                 packet.getPosition().getX() >> 4, packet.getPosition().getZ() >> 4);
         Client.instance.javaConnection.processServerToClientPacket(renderDistanceCenterPacket);
     }

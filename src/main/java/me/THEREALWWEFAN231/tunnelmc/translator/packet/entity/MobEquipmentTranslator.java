@@ -30,7 +30,7 @@ public class MobEquipmentTranslator extends PacketTranslator<MobEquipmentPacket>
 
         if (equipmentSlot != null) {
             Pair<EquipmentSlot, ItemStack> itemStackPair = new Pair<>(equipmentSlot, ItemTranslator.itemDataToItemStack(packet.getItem()));
-            EntityEquipmentUpdateS2CPacket equipmentUpdatePacket = new EntityEquipmentUpdateS2CPacket((int) packet.getRuntimeEntityId(),
+            ClientboundSetEquipmentPacket equipmentUpdatePacket = new ClientboundSetEquipmentPacket((int) packet.getRuntimeEntityId(),
                     Collections.singletonList(itemStackPair));
             Client.instance.javaConnection.processServerToClientPacket(equipmentUpdatePacket);
         } else {

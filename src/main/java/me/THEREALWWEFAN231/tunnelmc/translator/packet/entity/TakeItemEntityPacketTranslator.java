@@ -15,7 +15,7 @@ public class TakeItemEntityPacketTranslator extends PacketTranslator<TakeItemEnt
 		int collectorId = (int) packet.getRuntimeEntityId();
 		int stackAmount = 1;//this probably actually needs the correct value, ill test that later, we can probably get the value from the item entity in the world
 
-		ItemPickupAnimationS2CPacket itemPickupAnimationS2CPacket = new ItemPickupAnimationS2CPacket(entityId, collectorId, stackAmount);
+		ClientboundTakeItemEntityPacket itemPickupAnimationS2CPacket = new ClientboundTakeItemEntityPacket(entityId, collectorId, stackAmount);
 
 		Client.instance.javaConnection.processServerToClientPacket(itemPickupAnimationS2CPacket);
 

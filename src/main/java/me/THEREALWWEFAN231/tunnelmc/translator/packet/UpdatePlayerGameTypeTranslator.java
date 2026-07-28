@@ -10,10 +10,10 @@ import net.minecraft.world.level.GameType;
 public class UpdatePlayerGameTypeTranslator extends PacketTranslator<UpdatePlayerGameTypePacket> {
     @Override
     public void translate(UpdatePlayerGameTypePacket packet) {
-        GameMode javaGameMode = GameModeTranslator.bedrockToJava(packet.getGameType(), StartGameTranslator.DEFAULT_GAME_TYPE);
+        GameType javaGameMode = GameModeTranslator.bedrockToJava(packet.getGameType(), StartGameTranslator.DEFAULT_GAME_TYPE);
 
-        Client.instance.javaConnection.processServerToClientPacket(new GameStateChangeS2CPacket(
-                GameStateChangeS2CPacket.GAME_MODE_CHANGED,
+        Client.instance.javaConnection.processServerToClientPacket(new ClientboundGameEventPacket(
+                ClientboundGameEventPacket.CHANGE_GAME_MODE,
                 (float) javaGameMode.getId()));
     }
 

@@ -27,9 +27,9 @@ public class ServerToClientHandshakePacketTranslator extends PacketTranslator<Se
 			String payload = new String(Base64.getDecoder().decode(jwtSplit[1]));
 			JsonObject payloadObject = TunnelMC.instance.fileManagement.jsonParser.parse(payload).getAsJsonObject();
 			
-			ECPublicKey serverKey = EncryptionUtils.generateKey(headerObject.get("x5u").getAsString());
+			ECPublicKey serverKey = EncryptionUtils.parseKey(headerObject.get("x5u").getAsString());
 			SecretKey key = EncryptionUtils.getSecretKey(Client.instance.authData.getPrivateKey(), serverKey, Base64.getDecoder().decode(payloadObject.get("salt").getAsString()));
-			Client.instance.bedrockClient.getSession().enableEncryption(key);
+			Client.instance.bedrockSession.enableEncryption(key);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

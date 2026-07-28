@@ -22,7 +22,7 @@ public class MobArmorEquipmentTranslator extends PacketTranslator<MobArmorEquipm
         javaArmorSlots.add(translateArmorSlot(packet.getLeggings(), EquipmentSlot.LEGS));
         javaArmorSlots.add(translateArmorSlot(packet.getBoots(), EquipmentSlot.FEET));
 
-        EntityEquipmentUpdateS2CPacket equipmentUpdatePacket = new EntityEquipmentUpdateS2CPacket((int) packet.getRuntimeEntityId(),
+        ClientboundSetEquipmentPacket equipmentUpdatePacket = new ClientboundSetEquipmentPacket((int) packet.getRuntimeEntityId(),
                 javaArmorSlots);
         Client.instance.javaConnection.processServerToClientPacket(equipmentUpdatePacket);
     }

@@ -13,7 +13,7 @@ public class RemoveEntityPacketTranslator extends PacketTranslator<RemoveEntityP
 
 		int id = (int) packet.getUniqueEntityId();
 
-		EntitiesDestroyS2CPacket entitiesDestroyS2CPacket = new EntitiesDestroyS2CPacket(id);
+		ClientboundRemoveEntitiesPacket entitiesDestroyS2CPacket = new ClientboundRemoveEntitiesPacket(id);
 
 		Client.instance.javaConnection.processServerToClientPacket(entitiesDestroyS2CPacket);
 
