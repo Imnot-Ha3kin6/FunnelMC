@@ -2,6 +2,10 @@ package me.THEREALWWEFAN231.funnelmc.translator.blockstate;
 
 import org.cloudburstmc.nbt.NbtList;
 import org.cloudburstmc.nbt.NbtMap;
+import org.cloudburstmc.protocol.bedrock.data.definitions.BlockDefinition;
+import org.cloudburstmc.protocol.bedrock.data.definitions.SimpleBlockDefinition;
+import org.cloudburstmc.protocol.common.DefinitionRegistry;
+import org.cloudburstmc.protocol.common.SimpleDefinitionRegistry;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -26,11 +30,19 @@ public class BlockPaletteTranslator {
 	public static final Int2ObjectMap<BlockState> RUNTIME_ID_TO_BLOCK_STATE = new Int2ObjectOpenHashMap<>();
 	public static final Object2IntMap<BlockState> BLOCK_STATE_TO_RUNTIME_ID = new Object2IntOpenHashMap<>();
 
+	// The runtime block palette itself is client-local (see the class comment) and doesn't depend on
+	// any particular connection, so this can be built once here rather than per-connection - the
+	// Bedrock codec needs it to decode any packet carrying item stacks with block-item components
+	// (ItemComponentPacket, CreativeContentPacket, CraftingDataPacket, ...).
+	public static DefinitionRegistry<BlockDefinition> BLOCK_DEFINITIONS;
+
 	public static void loadMap(NbtList<NbtMap> blockPaletteData) {
 		int runtimeId = 0;
+		SimpleDefinitionRegistry.Builder<BlockDefinition> blockDefinitionsBuilder = SimpleDefinitionRegistry.builder();
 		for (NbtMap nbtMap : blockPaletteData) {
 			BedrockBlockState bedrockBlockState = bedrockStateFromNBTMap(nbtMap);
 			BEDROCK_BLOCK_STATE_TO_RUNTIME_ID.put(bedrockBlockState.toString(), runtimeId);
+			blockDefinitionsBuilder.add(new SimpleBlockDefinition(bedrockBlockState.identifier, runtimeId, nbtMap.getCompound("states")));
 
 			BlockState blockState = BlockStateTranslator.BEDROCK_BLOCK_STATE_STRING_TO_JAVA_BLOCK_STATE.get(bedrockBlockState.toString());
 			if (blockState != null) {
@@ -49,6 +61,7 @@ public class BlockPaletteTranslator {
 			runtimeId++;
 		}
 
+		BLOCK_DEFINITIONS = blockDefinitionsBuilder.build();
 	}
 
 	public static int getBedrockBlockId(BedrockBlockState state) {

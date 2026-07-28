@@ -1,6 +1,7 @@
 package me.THEREALWWEFAN231.funnelmc.javaconnection;
 
 import java.util.Collections;
+import java.util.UUID;
 
 import com.mojang.authlib.GameProfile;
 
@@ -8,6 +9,7 @@ import me.THEREALWWEFAN231.funnelmc.FunnelMC;
 import me.THEREALWWEFAN231.funnelmc.bedrockconnection.Client;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.CommonListenerCookie;
+import net.minecraft.client.telemetry.WorldSessionTelemetryManager;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
@@ -32,7 +34,12 @@ public class FakeJavaConnection {
 		// registries (worldgen/biome, worldgen/dimension_type, ...) to be present, not just the
 		// static item/block layer.
 		RegistryAccess.Frozen registryAccess = VanillaRegistryAccess.get();
-		CommonListenerCookie cookie = new CommonListenerCookie(null, gameProfile, null, registryAccess, FeatureFlags.VANILLA_SET, "funnelmc",
+		// ClientCommonPacketListenerImpl hard-requires this to be non-null - every packet handler that
+		// touches world/time state (handleLogin, handleSetTime, ...) calls straight into it with no
+		// null check, since a real server connection always gets one from Minecraft#getTelemetryManager.
+		WorldSessionTelemetryManager telemetryManager = FunnelMC.mc.getTelemetryManager()
+				.createWorldSessionManager(true, null, null, UUID.randomUUID());
+		CommonListenerCookie cookie = new CommonListenerCookie(null, gameProfile, telemetryManager, registryAccess, FeatureFlags.VANILLA_SET, "funnelmc",
 				null, null, Collections.emptyMap(), null, Collections.emptyMap(), ServerLinks.EMPTY, Collections.emptyMap(), false);
 		this.clientPacketListener = new ClientPacketListener(FunnelMC.mc, this.connection, cookie);
 		this.packetTranslatorManager = new JavaPacketTranslatorManager();

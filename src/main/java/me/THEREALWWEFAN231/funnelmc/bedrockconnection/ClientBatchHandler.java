@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacketHandler;
+import org.cloudburstmc.protocol.bedrock.packet.LevelChunkPacket;
 import org.cloudburstmc.protocol.bedrock.packet.NetworkSettingsPacket;
 import org.cloudburstmc.protocol.common.PacketSignal;
 
@@ -28,6 +29,16 @@ public class ClientBatchHandler implements BedrockPacketHandler {
 		if (packet instanceof NetworkSettingsPacket) {
 			Client.instance.onNetworkSettings((NetworkSettingsPacket) packet);
 			return PacketSignal.HANDLED;
+		}
+
+		// LevelChunkPacket#getData() is a Netty ByteBuf sliced out of the inbound frame, sharing that
+		// frame's refCnt rather than owning independent memory - normally fine since the pipeline
+		// releases the frame right after this handler returns, but we defer actual reading of it to
+		// LevelChunkTranslator on the main thread below, by which point the pipeline's release has
+		// already dropped it to refCnt 0. Retain it here on the Netty thread instead, so it survives
+		// until LevelChunkTranslator releases it once it's done copying out of it.
+		if (packet instanceof LevelChunkPacket) {
+			((LevelChunkPacket) packet).getData().retain();
 		}
 
 		// Translators touch client-only state (mc.level, mc.player, screens, ...) that vanilla

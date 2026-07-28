@@ -90,7 +90,10 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 		LevelChunkSection[] chunkSections = new LevelChunkSection[16];
 
 		ByteBuf byteBuf = Unpooled.buffer();
+		// ClientBatchHandler retains this before deferring us onto the main thread (see its comment) -
+		// release our hold once we've copied what we need out of it.
 		byteBuf.writeBytes(packet.getData());
+		packet.getData().release();
 
 		for (int sectionIndex = 0; sectionIndex < packet.getSubChunksLength(); sectionIndex++) {
 			chunkSections[sectionIndex] = new LevelChunkSection(FunnelMC.mc.level.palettedContainerFactory());

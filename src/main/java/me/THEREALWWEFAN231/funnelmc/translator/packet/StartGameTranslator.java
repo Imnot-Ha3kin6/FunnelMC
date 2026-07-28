@@ -17,6 +17,7 @@ import org.cloudburstmc.protocol.bedrock.packet.TickSyncPacket;
 import me.THEREALWWEFAN231.funnelmc.FunnelMC;
 import me.THEREALWWEFAN231.funnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.funnelmc.translator.PacketTranslator;
+import me.THEREALWWEFAN231.funnelmc.translator.blockstate.BlockPaletteTranslator;
 import me.THEREALWWEFAN231.funnelmc.translator.dimension.DimensionTranslator;
 import me.THEREALWWEFAN231.funnelmc.translator.gamemode.GameModeTranslator;
 import net.minecraft.core.Holder;
@@ -41,11 +42,13 @@ public class StartGameTranslator extends PacketTranslator<StartGamePacket> {
 	public void translate(StartGamePacket packet) {
 		// Every item-bearing packet that arrives after this one (CreativeContentPacket,
 		// ItemComponentPacket, CraftingDataPacket, AddItemEntityPacket, ...) gets decoded against
-		// this DefinitionRegistry - without it the codec NPEs on itemDefinitions being null the
-		// moment any of those packets shows up. Has to be set before this method returns since the
-		// next packet's decode happens on the same Netty thread right after.
+		// these DefinitionRegistrys - without them the codec NPEs on itemDefinitions/blockDefinitions
+		// being null the moment any of those packets shows up (item stacks can carry a block-item
+		// component that's decoded against blockDefinitions). Has to be set before this method returns
+		// since the next packet's decode happens on the same Netty thread right after.
 		Client.instance.bedrockSession.getPeer().getCodecHelper().setItemDefinitions(
 				SimpleDefinitionRegistry.<ItemDefinition>builder().addAll(packet.getItemDefinitions()).build());
+		Client.instance.bedrockSession.getPeer().getCodecHelper().setBlockDefinitions(BlockPaletteTranslator.BLOCK_DEFINITIONS);
 
 		int playerEntityId = (int) packet.getRuntimeEntityId();//not sure if we are suppose to use runtime id or unique id
 		lastRunTimeId = playerEntityId;
