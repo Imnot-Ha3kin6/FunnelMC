@@ -31,7 +31,7 @@ public class MovePlayerPacketTranslator extends PacketTranslator<MovePlayerPacke
 		float pitch = packet.getRotation().getX();
 		boolean onGround = packet.isOnGround();
 
-		if (id == TunnelMC.mc.player.getEntityId()) {
+		if (id == TunnelMC.mc.player.getId()) {
 			// This works best
 			PositionMoveRotation positionMoveRotation = new PositionMoveRotation(new Vec3(x, y, z), Vec3.ZERO, yaw, pitch);
 			ClientboundPlayerPositionPacket positionPacket = new ClientboundPlayerPositionPacket(0, positionMoveRotation, Collections.emptySet());

@@ -9,13 +9,13 @@ import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
 import net.minecraft.network.protocol.game.ServerboundChatPacket;
 
-public class ChatMessageC2SPacketTranslator extends PacketTranslator<ChatMessageC2SPacket> {
+public class ChatMessageC2SPacketTranslator extends PacketTranslator<ServerboundChatPacket> {
 
 	@Override
-	public void translate(ChatMessageC2SPacket packet) {
-		if (packet.getChatMessage().startsWith("/")) {
+	public void translate(ServerboundChatPacket packet) {
+		if (packet.message().startsWith("/")) {
 			CommandRequestPacket commandPacket = new CommandRequestPacket();
-			commandPacket.setCommand(packet.getChatMessage());
+			commandPacket.setCommand(packet.message());
 			commandPacket.setInternal(false); // ???
 			commandPacket.setCommandOriginData(new CommandOriginData(CommandOriginType.PLAYER, Client.instance.authData.getIdentity(), "", 0));
 
@@ -25,7 +25,7 @@ public class ChatMessageC2SPacketTranslator extends PacketTranslator<ChatMessage
 			textPacket.setType(TextPacket.Type.CHAT);
 			textPacket.setNeedsTranslation(false);
 			textPacket.setSourceName(Client.instance.authData.getDisplayName());
-			textPacket.setMessage(packet.getChatMessage());
+			textPacket.setMessage(packet.message());
 			textPacket.setXuid(Client.instance.authData.getXuid());
 
 			Client.instance.sendPacket(textPacket);
@@ -34,7 +34,7 @@ public class ChatMessageC2SPacketTranslator extends PacketTranslator<ChatMessage
 
 	@Override
 	public Class<?> getPacketClass() {
-		return ChatMessageC2SPacket.class;
+		return ServerboundChatPacket.class;
 	}
 
 }

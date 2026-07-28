@@ -8,22 +8,22 @@ import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
 import net.minecraft.network.protocol.game.ServerboundPlayerAbilitiesPacket;
 
-public class UpdatePlayerAbilitiesTranslator extends PacketTranslator<UpdatePlayerAbilitiesC2SPacket> {
+public class UpdatePlayerAbilitiesTranslator extends PacketTranslator<ServerboundPlayerAbilitiesPacket> {
     @Override
-    public void translate(UpdatePlayerAbilitiesC2SPacket packet) {
+    public void translate(ServerboundPlayerAbilitiesPacket packet) {
         AdventureSettingsPacket settingsPacket = new AdventureSettingsPacket();
         if (packet.isFlying()) {
             // Otherwise certain updates can stop the player from flying
             settingsPacket.getSettings().add(AdventureSetting.FLYING);
         }
         settingsPacket.setPlayerPermission(PlayerPermission.MEMBER); // needed?
-        settingsPacket.setCommandPermission(CommandPermission.NORMAL); // needed?
+        settingsPacket.setCommandPermission(CommandPermission.ANY); // needed?
 
         Client.instance.sendPacket(settingsPacket);
     }
 
     @Override
     public Class<?> getPacketClass() {
-        return UpdatePlayerAbilitiesC2SPacket.class;
+        return ServerboundPlayerAbilitiesPacket.class;
     }
 }

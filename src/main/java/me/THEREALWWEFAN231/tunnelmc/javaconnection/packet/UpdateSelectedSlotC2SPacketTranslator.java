@@ -9,16 +9,16 @@ import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.caches.container.BedrockCo
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
 import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
 
-public class UpdateSelectedSlotC2SPacketTranslator extends PacketTranslator<UpdateSelectedSlotC2SPacket> {
+public class UpdateSelectedSlotC2SPacketTranslator extends PacketTranslator<ServerboundSetCarriedItemPacket> {
 
 	@Override
-	public void translate(UpdateSelectedSlotC2SPacket packet) {
-		UpdateSelectedSlotC2SPacketTranslator.updateHotbarItem(packet.getSelectedSlot());
+	public void translate(ServerboundSetCarriedItemPacket packet) {
+		UpdateSelectedSlotC2SPacketTranslator.updateHotbarItem(packet.getSlot());
 	}
 
 	@Override
 	public Class<?> getPacketClass() {
-		return UpdateSelectedSlotC2SPacket.class;
+		return ServerboundSetCarriedItemPacket.class;
 	}
 	
 	public static void updateHotbarItem(int hotbarSlot) {
@@ -28,7 +28,7 @@ public class UpdateSelectedSlotC2SPacketTranslator extends PacketTranslator<Upda
 			return;
 		}
 		
-		long runtimeEntityId = TunnelMC.mc.player.getEntityId();
+		long runtimeEntityId = TunnelMC.mc.player.getId();
 		BedrockContainer container = Client.instance.containers.getPlayerInventory();
 		
 		ItemData item = container.getItemFromSlot(hotbarSlot);

@@ -12,7 +12,6 @@
     "MixinMinecraftClient",
     "MixinMultiplayerScreen",
     "MixinScreenHandler",
-    "MixinHandledScreen",
     "interfaces.IMixinPlayerListS2CPacket",
     "interfaces.IMixinSlot"
   ],

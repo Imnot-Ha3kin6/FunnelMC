@@ -11,7 +11,9 @@ import com.google.gson.JsonObject;
 
 import me.THEREALWWEFAN231.tunnelmc.TunnelMC;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.core.Registry;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 
 public class EntityTranslator {
 
@@ -19,10 +21,10 @@ public class EntityTranslator {
 
 	public static void load() {
 
-		List<EntityType<?>> allEntityTypes = Registry.ENTITY_TYPE.stream().collect(Collectors.toList());
+		List<EntityType<?>> allEntityTypes = BuiltInRegistries.ENTITY_TYPE.stream().collect(Collectors.toList());
 
 		for (EntityType<?> e : allEntityTypes) {
-			BEDROCK_IDENTIFIER_TO_ENTITY_TYPE.put(EntityType.getId(e).toString(), e);
+			BEDROCK_IDENTIFIER_TO_ENTITY_TYPE.put(EntityType.getKey(e).toString(), e);
 		}
 
 		JsonObject jsonObject = TunnelMC.instance.fileManagement.getJsonObjectFromResource("tunnelmc/entity override translations.json");
@@ -32,13 +34,13 @@ public class EntityTranslator {
 
 		for (Map.Entry<String, JsonElement> entry : jsonObject.entrySet()) {
 
-			Optional<EntityType<?>> optional = EntityType.get(entry.getValue().getAsString());
+			Optional<Holder.Reference<EntityType<?>>> optional = BuiltInRegistries.ENTITY_TYPE.get(Identifier.parse(entry.getValue().getAsString()));
 			if (!optional.isPresent()) {
 				System.out.println("Could not find entity type " + entry.getValue().getAsString() + " when reading entity override translations.json");
 				continue;
 			}
 
-			BEDROCK_IDENTIFIER_TO_ENTITY_TYPE.put(entry.getKey(), optional.get());
+			BEDROCK_IDENTIFIER_TO_ENTITY_TYPE.put(entry.getKey(), optional.get().value());
 		}
 
 	}

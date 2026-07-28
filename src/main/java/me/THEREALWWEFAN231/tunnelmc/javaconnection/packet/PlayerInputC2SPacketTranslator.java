@@ -25,7 +25,7 @@ public class PlayerInputC2SPacketTranslator extends PacketTranslator<Serverbound
 		this.lastShift = shift;
 
 		PlayerActionPacket playerActionPacket = new PlayerActionPacket();
-		playerActionPacket.setRuntimeEntityId(TunnelMC.mc.player.getEntityId());
+		playerActionPacket.setRuntimeEntityId(TunnelMC.mc.player.getId());
 		playerActionPacket.setAction(shift ? PlayerActionType.START_SNEAK : PlayerActionType.STOP_SNEAK);
 		playerActionPacket.setBlockPosition(Vector3i.ZERO);
 
