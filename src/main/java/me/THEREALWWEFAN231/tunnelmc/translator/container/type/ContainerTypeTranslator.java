@@ -5,45 +5,45 @@ import org.cloudburstmc.protocol.bedrock.data.inventory.ContainerType;
 import net.minecraft.world.inventory.MenuType;
 
 public class ContainerTypeTranslator {
-	
-	public static ScreenHandlerType<?> bedrockToJava(ContainerType containerType) {
+
+	public static MenuType<?> bedrockToJava(ContainerType containerType) {
 		switch (containerType) {
 		case NONE:
 			break;
 		case INVENTORY:
 			break;
 		case CONTAINER:
-			return ScreenHandlerType.GENERIC_9X3;
+			return MenuType.GENERIC_9x3;
 		case WORKBENCH:
-			return ScreenHandlerType.CRAFTING;
+			return MenuType.CRAFTING;
 		case FURNACE:
-			return ScreenHandlerType.FURNACE;
+			return MenuType.FURNACE;
 		case ENCHANTMENT:
-			return ScreenHandlerType.ENCHANTMENT;
+			return MenuType.ENCHANTMENT;
 		case BREWING_STAND:
-			return ScreenHandlerType.BREWING_STAND;
+			return MenuType.BREWING_STAND;
 		case ANVIL:
-			return ScreenHandlerType.ANVIL;
+			return MenuType.ANVIL;
 		case DISPENSER:
-			return ScreenHandlerType.GENERIC_3X3;
+			return MenuType.GENERIC_3x3;
 		case DROPPER:
-			return ScreenHandlerType.GENERIC_3X3;
+			return MenuType.GENERIC_3x3;
 		case HOPPER:
-			return ScreenHandlerType.HOPPER;
+			return MenuType.HOPPER;
 		case CAULDRON:
 			break;
 		case MINECART_CHEST:
-			return ScreenHandlerType.GENERIC_9X3;
+			return MenuType.GENERIC_9x3;
 		case MINECART_HOPPER:
-			return ScreenHandlerType.HOPPER;
+			return MenuType.HOPPER;
 		case HORSE:
-			break;//in the java edition the horse inventory is opened by OpenHorseScreenS2CPacket
+			break;//in the java edition the horse inventory is opened by ClientboundHorseScreenOpenPacket
 		case BEACON:
-			return ScreenHandlerType.BEACON;
+			return MenuType.BEACON;
 		case STRUCTURE_EDITOR:
 			break;//no idea
 		case TRADE:
-			return ScreenHandlerType.MERCHANT;
+			return MenuType.MERCHANT;
 		case COMMAND_BLOCK:
 			break;//command blocks aren't containers in the java edition, they are opened via CommandBlockBlockEntity
 		case JUKEBOX:
@@ -59,29 +59,29 @@ public class ContainerTypeTranslator {
 		case LAB_TABLE:
 			break;
 		case LOOM:
-			return ScreenHandlerType.LOOM;
+			return MenuType.LOOM;
 		case LECTERN:
-			return ScreenHandlerType.LECTERN;
+			return MenuType.LECTERN;
 		case GRINDSTONE:
-			return ScreenHandlerType.GRINDSTONE;
+			return MenuType.GRINDSTONE;
 		case BLAST_FURNACE:
-			return ScreenHandlerType.BLAST_FURNACE;
+			return MenuType.BLAST_FURNACE;
 		case SMOKER:
-			return ScreenHandlerType.SMOKER;
+			return MenuType.SMOKER;
 		case STONECUTTER:
-			return ScreenHandlerType.STONECUTTER;
+			return MenuType.STONECUTTER;
 		case CARTOGRAPHY:
-			return ScreenHandlerType.CARTOGRAPHY_TABLE;
+			return MenuType.CARTOGRAPHY_TABLE;
 		case HUD:
 			break;
 		case JIGSAW_EDITOR:
 			break;//I have no idea? Structure block? :shrug:
 		case SMITHING_TABLE:
-			return ScreenHandlerType.SMITHING;
+			return MenuType.SMITHING;
 		default:
 			break;
 		}
 		return null;
 	}
-	
+
 }

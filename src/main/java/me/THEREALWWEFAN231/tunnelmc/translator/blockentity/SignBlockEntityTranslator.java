@@ -2,8 +2,10 @@ package me.THEREALWWEFAN231.tunnelmc.translator.blockentity;
 
 import org.cloudburstmc.nbt.NbtMap;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.text.LiteralText;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
+
+import com.mojang.serialization.JsonOps;
 
 public class SignBlockEntityTranslator extends BlockEntityTranslator {
     @Override
@@ -27,11 +29,14 @@ public class SignBlockEntityTranslator extends BlockEntityTranslator {
             builder.append(c);
         }
 
+        // TODO use Adventure. Also note modern sign block entities store their text under
+        // nested front_text/back_text compounds (with a "messages" list + glowing/color/dyed
+        // fields), not flat Text1..Text4 keys - this still writes the old 1.16.5 layout.
         // TODO use Adventure
-        newTag.putString("Text1", Text.Serializer.toJson(new LiteralText(javaText[0])));
-        newTag.putString("Text2", Text.Serializer.toJson(new LiteralText(javaText[1])));
-        newTag.putString("Text3", Text.Serializer.toJson(new LiteralText(javaText[2])));
-        newTag.putString("Text4", Text.Serializer.toJson(new LiteralText(javaText[3])));
+        newTag.putString("Text1", ComponentSerialization.CODEC.encodeStart(JsonOps.INSTANCE, Component.literal(javaText[0])).getOrThrow().toString());
+        newTag.putString("Text2", ComponentSerialization.CODEC.encodeStart(JsonOps.INSTANCE, Component.literal(javaText[1])).getOrThrow().toString());
+        newTag.putString("Text3", ComponentSerialization.CODEC.encodeStart(JsonOps.INSTANCE, Component.literal(javaText[2])).getOrThrow().toString());
+        newTag.putString("Text4", ComponentSerialization.CODEC.encodeStart(JsonOps.INSTANCE, Component.literal(javaText[3])).getOrThrow().toString());
         return newTag;
     }
 
