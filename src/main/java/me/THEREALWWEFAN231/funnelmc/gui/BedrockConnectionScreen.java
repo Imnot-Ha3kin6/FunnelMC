@@ -69,23 +69,27 @@ public class BedrockConnectionScreen extends Screen {
 			port = 19132;
 		}
 
+		String address = this.addressField.getValue();
+		int finalPort = port;
 		boolean onlineMode = this.onlineModeWidget.selected();
+
+		ConnectingScreen connectingScreen = new ConnectingScreen(this, address + ":" + finalPort);
+		this.minecraft.setScreenAndShow(connectingScreen);
+
 		if (onlineMode) {
 			// The player already signed in via MicrosoftLoginScreen before they could reach this
 			// screen, so joining doesn't need to log in again. If the cached login is somehow
 			// missing (shouldn't happen given the gate), fall back to logging in first.
 			if (Client.instance.hasCachedLogin()) {
-				Client.instance.connectWithExistingAuth(this.addressField.getValue(), port, Client.instance.cachedAuth, Client.instance.cachedOnlineChainData);
+				Client.instance.connectWithExistingAuth(address, finalPort, Client.instance.cachedAuth, Client.instance.cachedOnlineChainData);
 			} else {
-				String address = this.addressField.getValue();
-				int finalPort = port;
 				this.minecraft.setScreenAndShow(new MicrosoftLoginScreen(this, () -> {
 					Client.instance.connectWithExistingAuth(address, finalPort, Client.instance.cachedAuth, Client.instance.cachedOnlineChainData);
-					return this;
+					return connectingScreen;
 				}));
 			}
 		} else {
-			Client.instance.initialize(this.addressField.getValue(), port, false);
+			Client.instance.initialize(address, finalPort, false);
 		}
 	}
 

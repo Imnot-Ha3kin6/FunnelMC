@@ -87,10 +87,10 @@ public class MicrosoftLoginScreen extends Screen {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
 		super.extractRenderState(graphics, mouseX, mouseY, partialTick);
-		graphics.centeredText(this.font, this.title, this.width / 2, this.height / 2 - 60, 0xFFFFFF);
-		graphics.centeredText(this.font, Component.literal(this.statusLine), this.width / 2, this.height / 2 - 30, 0xCCCCCC);
+		graphics.centeredText(this.font, this.title, this.width / 2, this.height / 2 - 60, 0xFFFFFFFF);
+		graphics.centeredText(this.font, Component.literal(this.statusLine), this.width / 2, this.height / 2 - 30, 0xFFCCCCCC);
 		if (!this.codeLine.isEmpty()) {
-			graphics.centeredText(this.font, Component.literal(this.codeLine), this.width / 2, this.height / 2 - 10, 0xFFFF55);
+			graphics.centeredText(this.font, Component.literal(this.codeLine), this.width / 2, this.height / 2 - 10, 0xFFFFFF55);
 		}
 	}
 
