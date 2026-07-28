@@ -3,23 +3,30 @@ package me.THEREALWWEFAN231.tunnelmc.translator.item;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.nbt.NbtType;
+import org.cloudburstmc.protocol.bedrock.data.definitions.ItemDefinition;
+import org.cloudburstmc.protocol.bedrock.data.definitions.SimpleItemDefinition;
 import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData;
 
 import me.THEREALWWEFAN231.tunnelmc.TunnelMC;
 import me.THEREALWWEFAN231.tunnelmc.translator.blockstate.BlockPaletteTranslator;
 import me.THEREALWWEFAN231.tunnelmc.translator.enchantment.EnchantmentTranslator;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.resources.Identifier;
-import net.minecraft.core.Registry;
 
 public class ItemTranslator {
 
@@ -35,13 +42,13 @@ public class ItemTranslator {
 
 		for (Map.Entry<String, JsonElement> entry : jsonObject.entrySet()) {
 			String javaStringIdentifier = entry.getKey();
-			Identifier javaIdentifier = new Identifier(javaStringIdentifier);
+			Identifier javaIdentifier = Identifier.parse(javaStringIdentifier);
 
 			JsonObject bedrockItemData = entry.getValue().getAsJsonObject();
 			int bedrockId = bedrockItemData.get("bedrock_id").getAsInt();
 			int bedrockData = bedrockItemData.get("bedrock_data").getAsInt();
 
-			Item item = Registry.ITEM.get(javaIdentifier);
+			Item item = BuiltInRegistries.ITEM.getValue(javaIdentifier);
 
 			if (item == Items.AIR && !javaStringIdentifier.equals("minecraft:air")) {//item not found
 				System.out.println(javaStringIdentifier + " item was not found, this generally isn't good.");
@@ -62,26 +69,41 @@ public class ItemTranslator {
 		}
 
 		//keep the short cast, the server can send us non short numbers that, "need to be rolled over" to their correct id
-		ItemStack itemStack = new ItemStack(BEDROCK_ITEM_INFO_TO_JAVA_ITEM.get((short) itemData.getId() + ":" + damage));
+		// TODO: modern Bedrock items are identified via ItemDefinition (runtime id negotiated per
+		// session), not a fixed legacy numeric id - getRuntimeId() here is a stand-in.
+		ItemStack itemStack = new ItemStack(BEDROCK_ITEM_INFO_TO_JAVA_ITEM.get((short) itemData.getDefinition().getRuntimeId() + ":" + damage));
 		itemStack.setCount(itemData.getCount());
 
 		if (itemData.getTag() != null) {
 			List<NbtMap> bedrockEnchantments = itemData.getTag().getList("ench", NbtType.COMPOUND, null);
 			if (bedrockEnchantments != null) {
-				
-				for(NbtMap enchantmentData : bedrockEnchantments) {
+
+				// TODO: this needs real registry data - see DimensionTranslator/StartGameTranslator
+				// TODOs. Enchantments are a datapack-driven registry now, so without a real
+				// RegistryAccess this lookup will always come back empty.
+				Optional<Registry<Enchantment>> enchantmentRegistry = TunnelMC.mc.player.level().registryAccess().lookup(Registries.ENCHANTMENT);
+
+				for (NbtMap enchantmentData : bedrockEnchantments) {
 					int bedrockEnchantmentId = enchantmentData.getShort("id");
 					int enchantmentLevel = enchantmentData.getShort("lvl");
-					
-					Enchantment javaEnchantment = EnchantmentTranslator.BEDROCK_TO_JAVA_ENCHANTMENTS.get(bedrockEnchantmentId);
-					if(javaEnchantment == null) {
+
+					ResourceKey<Enchantment> javaEnchantmentKey = EnchantmentTranslator.BEDROCK_TO_JAVA_ENCHANTMENTS.get(bedrockEnchantmentId);
+					if (javaEnchantmentKey == null) {
 						System.out.println("Enchantment " + bedrockEnchantmentId + " not found");
 						continue;
 					}
 
-					itemStack.addEnchantment(javaEnchantment, enchantmentLevel);
+					Holder<Enchantment> javaEnchantment = enchantmentRegistry
+							.flatMap(registry -> registry.get(javaEnchantmentKey.identifier()))
+							.map(reference -> (Holder<Enchantment>) reference)
+							.orElse(null);
+					if (javaEnchantment == null) {
+						continue;
+					}
+
+					itemStack.enchant(javaEnchantment, enchantmentLevel);
 				}
-				
+
 			}
 		}
 
@@ -106,11 +128,13 @@ public class ItemTranslator {
 
 		String[] idDamageSplit = idDamageString.split(":");
 
-		int blockRuntimeId = BlockPaletteTranslator.BLOCK_STATE_TO_RUNTIME_ID.getInt(Block.getBlockFromItem(itemStack.getItem()).getDefaultState());
-
 		NbtMap nbtMap = NbtMap.builder().putInt("Damage", 1).build();
 
-		ItemData itemData = ItemData.builder().id(Integer.parseInt(idDamageSplit[0])).damage(Integer.parseInt(idDamageSplit[1])).count(itemStack.getCount()).tag(nbtMap).blockRuntimeId(blockRuntimeId).build();
+		// TODO: modern Bedrock items are identified via ItemDefinition (identifier + runtime id
+		// negotiated per session, see itemDataToItemStack above) and blocks via BlockDefinition -
+		// this SimpleItemDefinition is a placeholder using the legacy numeric id as both.
+		ItemDefinition itemDefinition = new SimpleItemDefinition(idDamageString, Integer.parseInt(idDamageSplit[0]), false);
+		ItemData itemData = ItemData.builder().definition(itemDefinition).damage(Integer.parseInt(idDamageSplit[1])).count(itemStack.getCount()).tag(nbtMap).build();
 
 		return itemData;
 	}
