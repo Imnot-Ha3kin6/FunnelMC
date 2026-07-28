@@ -3,13 +3,17 @@ package me.THEREALWWEFAN231.funnelmc.bedrockconnection;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import org.cloudburstmc.protocol.bedrock.data.definitions.ItemDefinition;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacketHandler;
 import org.cloudburstmc.protocol.bedrock.packet.LevelChunkPacket;
 import org.cloudburstmc.protocol.bedrock.packet.NetworkSettingsPacket;
+import org.cloudburstmc.protocol.bedrock.packet.StartGamePacket;
 import org.cloudburstmc.protocol.common.PacketSignal;
+import org.cloudburstmc.protocol.common.SimpleDefinitionRegistry;
 
 import me.THEREALWWEFAN231.funnelmc.FunnelMC;
+import me.THEREALWWEFAN231.funnelmc.translator.blockstate.BlockPaletteTranslator;
 import net.minecraft.client.Minecraft;
 
 public class ClientBatchHandler implements BedrockPacketHandler {
@@ -29,6 +33,22 @@ public class ClientBatchHandler implements BedrockPacketHandler {
 		if (packet instanceof NetworkSettingsPacket) {
 			Client.instance.onNetworkSettings((NetworkSettingsPacket) packet);
 			return PacketSignal.HANDLED;
+		}
+
+		// Every item-bearing packet that arrives after this one (CreativeContentPacket,
+		// ItemComponentPacket, CraftingDataPacket, AddItemEntityPacket, ...) gets decoded against
+		// these DefinitionRegistrys - without them the codec NPEs on itemDefinitions/blockDefinitions
+		// being null the moment any of those packets shows up (item stacks can carry a block-item
+		// component that's decoded against blockDefinitions). This has to happen synchronously right
+		// here, not inside StartGameTranslator - packet translation is deferred onto the main thread
+		// below, but packet *decoding* keeps happening on this Netty thread as bytes arrive regardless
+		// of whether the main thread has gotten around to running StartGamePacket's deferred translate()
+		// yet, so a subsequent packet in the same batch could get decoded before that ever runs.
+		if (packet instanceof StartGamePacket) {
+			StartGamePacket startGamePacket = (StartGamePacket) packet;
+			Client.instance.bedrockSession.getPeer().getCodecHelper().setItemDefinitions(
+					SimpleDefinitionRegistry.<ItemDefinition>builder().addAll(startGamePacket.getItemDefinitions()).build());
+			Client.instance.bedrockSession.getPeer().getCodecHelper().setBlockDefinitions(BlockPaletteTranslator.BLOCK_DEFINITIONS);
 		}
 
 		// LevelChunkPacket#getData() is a Netty ByteBuf sliced out of the inbound frame, sharing that

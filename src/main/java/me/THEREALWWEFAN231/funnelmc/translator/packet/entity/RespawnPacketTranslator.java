@@ -35,6 +35,10 @@ public class RespawnPacketTranslator extends PacketTranslator<RespawnPacket> {
 			playerActionPacket.setRuntimeEntityId(FunnelMC.mc.player.getId());
 			playerActionPacket.setAction(PlayerActionType.RESPAWN);
 			playerActionPacket.setBlockPosition(Vector3i.ZERO);
+			// The serializer writes this unconditionally regardless of action type, even though it's
+			// only meaningful for block-interaction actions - never set here, so RESPAWN NPE'd trying
+			// to encode a null resultPosition.
+			playerActionPacket.setResultPosition(Vector3i.ZERO);
 			playerActionPacket.setFace(-1);
 
 			Client.instance.sendPacket(playerActionPacket);

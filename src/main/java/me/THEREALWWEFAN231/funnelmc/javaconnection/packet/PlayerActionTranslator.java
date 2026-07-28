@@ -37,6 +37,7 @@ public class PlayerActionTranslator extends PacketTranslator<ServerboundPlayerAc
 			playerActionPacket.setRuntimeEntityId(runtimeId);
 			playerActionPacket.setAction(PlayerActionType.START_BREAK);
 			playerActionPacket.setBlockPosition(blockPosition);
+			playerActionPacket.setResultPosition(Vector3i.ZERO);
 			playerActionPacket.setFace(packet.getDirection().ordinal());
 
 			Client.instance.sendPacket(playerActionPacket);
@@ -47,6 +48,7 @@ public class PlayerActionTranslator extends PacketTranslator<ServerboundPlayerAc
 			playerActionPacket.setRuntimeEntityId(runtimeId);
 			playerActionPacket.setAction(PlayerActionType.STOP_BREAK);
 			playerActionPacket.setBlockPosition(blockPosition);
+			playerActionPacket.setResultPosition(Vector3i.ZERO);
 			playerActionPacket.setFace(packet.getDirection().ordinal());
 
 			Client.instance.sendPacket(playerActionPacket);
@@ -57,6 +59,7 @@ public class PlayerActionTranslator extends PacketTranslator<ServerboundPlayerAc
 				creativePacket.setRuntimeEntityId(runtimeId);
 				creativePacket.setAction(PlayerActionType.DIMENSION_CHANGE_REQUEST_OR_CREATIVE_DESTROY_BLOCK);
 				creativePacket.setBlockPosition(blockPosition);
+				creativePacket.setResultPosition(Vector3i.ZERO);
 				playerActionPacket.setFace(packet.getDirection().ordinal());
 
 				Client.instance.sendPacket(playerActionPacket);
@@ -83,6 +86,7 @@ public class PlayerActionTranslator extends PacketTranslator<ServerboundPlayerAc
 			playerActionPacket.setRuntimeEntityId(runtimeId);
 			playerActionPacket.setAction(PlayerActionType.ABORT_BREAK);
 			playerActionPacket.setBlockPosition(blockPosition);
+			playerActionPacket.setResultPosition(Vector3i.ZERO);
 			playerActionPacket.setFace(packet.getDirection().ordinal());
 
 			Client.instance.sendPacket(playerActionPacket);
@@ -108,6 +112,7 @@ public class PlayerActionTranslator extends PacketTranslator<ServerboundPlayerAc
 		playerActionPacket.setRuntimeEntityId(runtimeId);
 		playerActionPacket.setAction(action);
 		playerActionPacket.setBlockPosition(this.lastBlockPosition);
+		playerActionPacket.setResultPosition(Vector3i.ZERO);
 		playerActionPacket.setFace(this.lastDirection.ordinal());
 
 		Client.instance.sendPacket(playerActionPacket);

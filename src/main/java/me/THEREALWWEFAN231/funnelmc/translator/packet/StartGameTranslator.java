@@ -7,17 +7,14 @@ import java.util.Set;
 
 import org.cloudburstmc.protocol.bedrock.data.GameRuleData;
 import org.cloudburstmc.protocol.bedrock.data.GameType;
-import org.cloudburstmc.protocol.bedrock.data.definitions.ItemDefinition;
 import org.cloudburstmc.protocol.bedrock.packet.RequestChunkRadiusPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SetLocalPlayerAsInitializedPacket;
 import org.cloudburstmc.protocol.bedrock.packet.StartGamePacket;
-import org.cloudburstmc.protocol.common.SimpleDefinitionRegistry;
 
 import org.cloudburstmc.protocol.bedrock.packet.TickSyncPacket;
 import me.THEREALWWEFAN231.funnelmc.FunnelMC;
 import me.THEREALWWEFAN231.funnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.funnelmc.translator.PacketTranslator;
-import me.THEREALWWEFAN231.funnelmc.translator.blockstate.BlockPaletteTranslator;
 import me.THEREALWWEFAN231.funnelmc.translator.dimension.DimensionTranslator;
 import me.THEREALWWEFAN231.funnelmc.translator.gamemode.GameModeTranslator;
 import net.minecraft.core.Holder;
@@ -40,16 +37,8 @@ public class StartGameTranslator extends PacketTranslator<StartGamePacket> {
 
 	@Override
 	public void translate(StartGamePacket packet) {
-		// Every item-bearing packet that arrives after this one (CreativeContentPacket,
-		// ItemComponentPacket, CraftingDataPacket, AddItemEntityPacket, ...) gets decoded against
-		// these DefinitionRegistrys - without them the codec NPEs on itemDefinitions/blockDefinitions
-		// being null the moment any of those packets shows up (item stacks can carry a block-item
-		// component that's decoded against blockDefinitions). Has to be set before this method returns
-		// since the next packet's decode happens on the same Netty thread right after.
-		Client.instance.bedrockSession.getPeer().getCodecHelper().setItemDefinitions(
-				SimpleDefinitionRegistry.<ItemDefinition>builder().addAll(packet.getItemDefinitions()).build());
-		Client.instance.bedrockSession.getPeer().getCodecHelper().setBlockDefinitions(BlockPaletteTranslator.BLOCK_DEFINITIONS);
-
+		// itemDefinitions/blockDefinitions are set synchronously in ClientBatchHandler, not here -
+		// see its comment for why this deferred-to-main-thread translate() is too late for that.
 		Client.instance.movementMode = packet.getAuthoritativeMovementMode();
 
 		int playerEntityId = (int) packet.getRuntimeEntityId();//not sure if we are suppose to use runtime id or unique id
