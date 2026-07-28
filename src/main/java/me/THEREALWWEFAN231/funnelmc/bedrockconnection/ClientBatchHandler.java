@@ -1,14 +1,24 @@
 package me.THEREALWWEFAN231.funnelmc.bedrockconnection;
 
+import java.security.interfaces.ECPublicKey;
+import java.util.Base64;
+
+import javax.crypto.SecretKey;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import com.google.gson.JsonObject;
 
 import org.cloudburstmc.protocol.bedrock.data.definitions.ItemDefinition;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacketHandler;
+import org.cloudburstmc.protocol.bedrock.packet.ClientToServerHandshakePacket;
 import org.cloudburstmc.protocol.bedrock.packet.LevelChunkPacket;
 import org.cloudburstmc.protocol.bedrock.packet.NetworkSettingsPacket;
+import org.cloudburstmc.protocol.bedrock.packet.ServerToClientHandshakePacket;
 import org.cloudburstmc.protocol.bedrock.packet.StartGamePacket;
+import org.cloudburstmc.protocol.bedrock.util.EncryptionUtils;
 import org.cloudburstmc.protocol.common.PacketSignal;
 import org.cloudburstmc.protocol.common.SimpleDefinitionRegistry;
 
@@ -32,6 +42,20 @@ public class ClientBatchHandler implements BedrockPacketHandler {
 		// gameplay, and it's what unblocks actually sending LoginPacket.
 		if (packet instanceof NetworkSettingsPacket) {
 			Client.instance.onNetworkSettings((NetworkSettingsPacket) packet);
+			return PacketSignal.HANDLED;
+		}
+
+		// Enabling encryption has to happen synchronously right here on the Netty I/O thread, not
+		// via the deferred Minecraft.getInstance().execute() translator path below. The server
+		// starts encrypting every packet it sends immediately after this handshake packet, but the
+		// Netty thread keeps decoding whatever arrives next regardless of whether the main thread
+		// has gotten around to running the queued lambda yet - any packet that lands in that window
+		// gets fed into the compression codec as raw ciphertext, which reads a garbage byte for the
+		// compression algorithm and blows up with "Unknown compression algorithm <garbage>",
+		// killing the RakNet session and forcing a reconnect. This logic touches no client-only
+		// state (mc.level, mc.player, screens, ...), so it's safe to run inline here.
+		if (packet instanceof ServerToClientHandshakePacket) {
+			handleServerToClientHandshake((ServerToClientHandshakePacket) packet);
 			return PacketSignal.HANDLED;
 		}
 
@@ -68,6 +92,28 @@ public class ClientBatchHandler implements BedrockPacketHandler {
 		Minecraft.getInstance().execute(() -> FunnelMC.instance.packetTranslatorManager.translatePacket(packet));
 
 		return PacketSignal.HANDLED;
+	}
+
+	// Thanks to proxypass, manually parse the jwt, as said in Xbox, this would be easier using the
+	// jwt library but I like seeing what's actually happening
+	private void handleServerToClientHandshake(ServerToClientHandshakePacket packet) {
+		try {
+			String[] jwtSplit = packet.getJwt().split("\\.");
+			String header = new String(Base64.getDecoder().decode(jwtSplit[0]));
+			JsonObject headerObject = FunnelMC.instance.fileManagement.jsonParser.parse(header).getAsJsonObject();
+
+			String payload = new String(Base64.getDecoder().decode(jwtSplit[1]));
+			JsonObject payloadObject = FunnelMC.instance.fileManagement.jsonParser.parse(payload).getAsJsonObject();
+
+			ECPublicKey serverKey = EncryptionUtils.parseKey(headerObject.get("x5u").getAsString());
+			SecretKey key = EncryptionUtils.getSecretKey(Client.instance.authData.getPrivateKey(), serverKey, Base64.getDecoder().decode(payloadObject.get("salt").getAsString()));
+			Client.instance.bedrockSession.enableEncryption(key);
+		} catch (Exception e) {
+			this.logger.error("Failed to enable Bedrock session encryption from ServerToClientHandshakePacket", e);
+		}
+
+		ClientToServerHandshakePacket clientToServerHandshake = new ClientToServerHandshakePacket();
+		Client.instance.sendPacketImmediately(clientToServerHandshake);
 	}
 
 }

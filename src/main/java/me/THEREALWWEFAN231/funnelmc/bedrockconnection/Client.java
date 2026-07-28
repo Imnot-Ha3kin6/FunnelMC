@@ -210,8 +210,7 @@ public class Client {
 			this.javaConnection = new FakeJavaConnection();
 
 		} catch (Exception e) {
-			//TODO: do something better with this
-			e.printStackTrace();
+			this.logger.error("Failed to complete Bedrock login / build fake Java connection", e);
 		}
 	}
 
