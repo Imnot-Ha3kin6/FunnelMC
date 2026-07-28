@@ -43,12 +43,20 @@ public class RespawnPacketTranslator extends PacketTranslator<RespawnPacket> {
 
 			Client.instance.sendPacket(playerActionPacket);
 
-			//TODO: correct these values, so like it's not just overworld, and survival
-			Holder<DimensionType> dimensionType = DimensionTranslator.bedrockToJavaDimensionType(0);
-			ResourceKey<Level> dimensionId = Level.OVERWORLD;
-			CommonPlayerSpawnInfo commonPlayerSpawnInfo = new CommonPlayerSpawnInfo(dimensionType, dimensionId, -1, GameType.SURVIVAL, GameType.SURVIVAL, false, false, Optional.empty(), 0, 63);
-			ClientboundRespawnPacket clientboundRespawnPacket = new ClientboundRespawnPacket(commonPlayerSpawnInfo, ClientboundRespawnPacket.KEEP_ALL_DATA);
-			Client.instance.javaConnection.processServerToClientPacket(clientboundRespawnPacket);
+			// This same SERVER_READY state also occurs as part of the initial join handshake, not just
+			// an actual player death - translating it into a real Java ClientboundRespawnPacket during
+			// that handshake resets ClientPacketListener's LevelLoadTracker back to WaitingForServer,
+			// undoing LEVEL_CHUNKS_LOAD_START and leaving "Loading Terrain" stuck forever. The
+			// PlayerActionType.RESPAWN acknowledgment above is still required either way to complete
+			// Bedrock's handshake; only the Java-side respawn packet needs gating.
+			if (Client.instance.initialSpawnComplete) {
+				//TODO: correct these values, so like it's not just overworld, and survival
+				Holder<DimensionType> dimensionType = DimensionTranslator.bedrockToJavaDimensionType(0);
+				ResourceKey<Level> dimensionId = Level.OVERWORLD;
+				CommonPlayerSpawnInfo commonPlayerSpawnInfo = new CommonPlayerSpawnInfo(dimensionType, dimensionId, -1, GameType.SURVIVAL, GameType.SURVIVAL, false, false, Optional.empty(), 0, 63);
+				ClientboundRespawnPacket clientboundRespawnPacket = new ClientboundRespawnPacket(commonPlayerSpawnInfo, ClientboundRespawnPacket.KEEP_ALL_DATA);
+				Client.instance.javaConnection.processServerToClientPacket(clientboundRespawnPacket);
+			}
 		}
 
 	}

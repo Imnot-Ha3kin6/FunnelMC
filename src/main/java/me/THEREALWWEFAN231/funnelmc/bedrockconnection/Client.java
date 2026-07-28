@@ -221,6 +221,14 @@ public class Client {
 		this.openContainerId = 0;
 	}
 
+	// Bedrock's respawn state machine (CLIENT_SEARCHING -> SERVER_SEARCHING -> SERVER_READY ->
+	// CLIENT_READY_TO_SPAWN) also runs as part of the initial join handshake, not just actual player
+	// deaths - RespawnPacketTranslator uses this to tell the two apart, since translating the
+	// handshake's SERVER_READY into a real Java ClientboundRespawnPacket resets ClientPacketListener's
+	// LevelLoadTracker back to its initial WaitingForServer state, undoing LEVEL_CHUNKS_LOAD_START and
+	// leaving the "Loading Terrain" screen stuck forever. Set once StartGameTranslator finishes.
+	public boolean initialSpawnComplete = false;
+
 	public boolean isConnectionOpen() {
 		return this.bedrockSession != null && this.bedrockSession.isConnected();
 	}
