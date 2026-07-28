@@ -9,7 +9,7 @@ import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 
-public class PlayerMoveTranslator extends PacketTranslator<PlayerMoveC2SPacket> {
+public class PlayerMoveTranslator extends PacketTranslator<ServerboundMovePlayerPacket> {
 
 	//so java edition sends movement packets every x(i forgot) ticks  even if we didn't move, bedrock doesn't do this, so we basically try to ignore these packets
 	public static double lastPosX;
@@ -20,29 +20,29 @@ public class PlayerMoveTranslator extends PacketTranslator<PlayerMoveC2SPacket> 
 	public static boolean lastOnGround;
 
 	@Override
-	public void translate(PlayerMoveC2SPacket packet) {
+	public void translate(ServerboundMovePlayerPacket packet) {
 		//this shouldn't even be called? I don't know, doesn't matter
 		PlayerMoveTranslator.translateMovementPacket(packet, MovePlayerPacket.Mode.NORMAL);
 	}
 
 	@Override
 	public Class<?> getPacketClass() {
-		return PlayerMoveC2SPacket.class;
+		return ServerboundMovePlayerPacket.class;
 	}
 
-	public static void translateMovementPacket(PlayerMoveC2SPacket playerMoveC2SPacket, MovePlayerPacket.Mode mode) {
-		double currentPosX = playerMoveC2SPacket.getX(TunnelMC.mc.player.getPos().x);
-		double currentPosY = playerMoveC2SPacket.getY(TunnelMC.mc.player.getPos().y) + TunnelMC.mc.player.getEyeHeight(EntityPose.STANDING);
-		double currentPosZ = playerMoveC2SPacket.getZ(TunnelMC.mc.player.getPos().z);
-		float currentYaw = playerMoveC2SPacket.getYaw(TunnelMC.mc.player.yaw);
-		float currentPitch = playerMoveC2SPacket.getPitch(TunnelMC.mc.player.pitch);
-		boolean currentlyOnGround = playerMoveC2SPacket.isOnGround();
+	public static void translateMovementPacket(ServerboundMovePlayerPacket serverboundMovePlayerPacket, MovePlayerPacket.Mode mode) {
+		double currentPosX = serverboundMovePlayerPacket.getX(TunnelMC.mc.player.getX());
+		double currentPosY = serverboundMovePlayerPacket.getY(TunnelMC.mc.player.getY()) + TunnelMC.mc.player.getEyeHeight(Pose.STANDING);
+		double currentPosZ = serverboundMovePlayerPacket.getZ(TunnelMC.mc.player.getZ());
+		float currentYaw = serverboundMovePlayerPacket.getYRot(TunnelMC.mc.player.getYRot());
+		float currentPitch = serverboundMovePlayerPacket.getXRot(TunnelMC.mc.player.getXRot());
+		boolean currentlyOnGround = serverboundMovePlayerPacket.isOnGround();
 
 		if (PlayerMoveTranslator.lastPosX == currentPosX && PlayerMoveTranslator.lastPosY == currentPosY && PlayerMoveTranslator.lastPosZ == currentPosZ && PlayerMoveTranslator.lastYaw == currentYaw && PlayerMoveTranslator.lastPitch == currentPitch && PlayerMoveTranslator.lastOnGround == currentlyOnGround) {
 			return;
 		}
 
-		int runtimeId = TunnelMC.mc.player.getEntityId();
+		int runtimeId = TunnelMC.mc.player.getId();
 
 		MovePlayerPacket movePlayerPacket = new MovePlayerPacket();
 		movePlayerPacket.setRuntimeEntityId(runtimeId);

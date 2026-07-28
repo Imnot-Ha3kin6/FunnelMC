@@ -4,19 +4,18 @@ import org.cloudburstmc.protocol.bedrock.packet.MovePlayerPacket;
 
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket.LookOnly;
 
-public class LookOnlyTranslator extends PacketTranslator<PlayerMoveC2SPacket.LookOnly> {
+public class LookOnlyTranslator extends PacketTranslator<ServerboundMovePlayerPacket.Rot> {
 
 	@Override
-	public void translate(LookOnly packet) {
+	public void translate(ServerboundMovePlayerPacket.Rot packet) {
 		PlayerMoveTranslator.translateMovementPacket(packet, MovePlayerPacket.Mode.HEAD_ROTATION);
 
 	}
 
 	@Override
 	public Class<?> getPacketClass() {
-		return PlayerMoveC2SPacket.LookOnly.class;
+		return ServerboundMovePlayerPacket.Rot.class;
 	}
 
 }
