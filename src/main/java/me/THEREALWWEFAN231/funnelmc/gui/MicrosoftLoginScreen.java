@@ -11,6 +11,7 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 
 import me.THEREALWWEFAN231.funnelmc.auth.Auth;
+import me.THEREALWWEFAN231.funnelmc.auth.AuthTokenStore;
 import me.THEREALWWEFAN231.funnelmc.auth.DeviceCodeAuth;
 import me.THEREALWWEFAN231.funnelmc.bedrockconnection.Client;
 
@@ -53,6 +54,21 @@ public class MicrosoftLoginScreen extends Screen {
 	private void startLogin() {
 		new Thread(() -> {
 			try {
+				// Skip the device code screen entirely if we've already got a refresh token saved
+				// from a previous launch - silent, no player interaction needed. Only fall back to
+				// the full device code flow if there isn't one saved yet, or it's been revoked/expired.
+				String savedRefreshToken = AuthTokenStore.loadRefreshToken();
+				if (savedRefreshToken != null) {
+					this.minecraft.execute(() -> this.statusLine = "Signing in with your saved login...");
+
+					try {
+						this.finishLogin(DeviceCodeAuth.refreshAccessToken(savedRefreshToken));
+						return;
+					} catch (Exception e) {
+						// Saved token no longer works - fall through to the normal device code flow.
+					}
+				}
+
 				this.deviceCodeInfo = DeviceCodeAuth.requestDeviceCode();
 				this.minecraft.execute(() -> {
 					this.statusLine = "Go to " + this.deviceCodeInfo.verificationUri + " and enter the code below:";
@@ -60,19 +76,7 @@ public class MicrosoftLoginScreen extends Screen {
 					this.copyCodeButton.active = true;
 				});
 
-				String msaAccessToken = DeviceCodeAuth.pollForAccessToken(this.deviceCodeInfo);
-
-				Auth auth = new Auth();
-				java.util.List<String> onlineChainData = auth.getOnlineChainData(msaAccessToken);
-				String xboxLiveAuthorizationHeader = auth.getXboxLiveAuthorizationHeader();
-				Client.instance.setCachedLogin(auth, onlineChainData, xboxLiveAuthorizationHeader);
-
-				this.minecraft.execute(() -> {
-					this.statusLine = "Logged in!";
-					this.codeLine = "";
-					this.copyCodeButton.active = false;
-					this.minecraft.setScreenAndShow(this.nextScreen.get());
-				});
+				this.finishLogin(DeviceCodeAuth.pollForAccessToken(this.deviceCodeInfo));
 			} catch (Exception e) {
 				e.printStackTrace();
 				this.minecraft.execute(() -> {
@@ -82,6 +86,22 @@ public class MicrosoftLoginScreen extends Screen {
 				});
 			}
 		}, "FunnelMC-Login").start();
+	}
+
+	private void finishLogin(DeviceCodeAuth.TokenResponse tokens) throws Exception {
+		AuthTokenStore.saveRefreshToken(tokens.refreshToken);
+
+		Auth auth = new Auth();
+		java.util.List<String> onlineChainData = auth.getOnlineChainData(tokens.accessToken);
+		String xboxLiveAuthorizationHeader = auth.getXboxLiveAuthorizationHeader();
+		Client.instance.setCachedLogin(auth, onlineChainData, xboxLiveAuthorizationHeader);
+
+		this.minecraft.execute(() -> {
+			this.statusLine = "Logged in!";
+			this.codeLine = "";
+			this.copyCodeButton.active = false;
+			this.minecraft.setScreenAndShow(this.nextScreen.get());
+		});
 	}
 
 	@Override

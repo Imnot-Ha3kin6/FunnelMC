@@ -116,6 +116,15 @@ public class Client {
 	}
 
 	private void connect() {
+		// Reconnecting without restarting the game (e.g. after a crash, or just trying again) never
+		// told the previous session's server we were leaving - the JVM shutdown hook in
+		// onSessionInitialized only covers actually quitting the game. Left the old RakNet session
+		// dangling server-side until its own timeout, so Geyser/Floodgate's duplicate-login guard
+		// rejected every attempt in between with "X is already logged in!".
+		if (this.bedrockSession != null && this.bedrockSession.isConnected()) {
+			this.bedrockSession.disconnect();
+		}
+
 		org.apache.logging.log4j.core.Logger logger = (org.apache.logging.log4j.core.Logger) LogManager.getRootLogger();
 		logger.get().setLevel(Level.DEBUG);
 
