@@ -9,24 +9,24 @@ import net.minecraft.world.level.GameType;
 public class SetPlayerGameTypeTranslator extends PacketTranslator<SetPlayerGameTypePacket> {
     @Override
     public void translate(SetPlayerGameTypePacket packet) {
-        GameMode javaGameMode;
+        GameType javaGameMode;
         switch (packet.getGamemode()) {
             case 0:
-                javaGameMode = GameMode.SURVIVAL;
+                javaGameMode = GameType.SURVIVAL;
                 break;
             case 1:
-                javaGameMode = GameMode.CREATIVE;
+                javaGameMode = GameType.CREATIVE;
                 break;
             case 2:
-                javaGameMode = GameMode.ADVENTURE;
+                javaGameMode = GameType.ADVENTURE;
                 break;
             default:
                 System.out.println("Don't know how to process " + packet.toString());
                 return;
         }
 
-        Client.instance.javaConnection.processServerToClientPacket(new GameStateChangeS2CPacket(
-                GameStateChangeS2CPacket.GAME_MODE_CHANGED,
+        Client.instance.javaConnection.processServerToClientPacket(new ClientboundGameEventPacket(
+                ClientboundGameEventPacket.CHANGE_GAME_MODE,
                 (float) javaGameMode.getId()));
     }
 

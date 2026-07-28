@@ -1,21 +1,20 @@
 package me.THEREALWWEFAN231.tunnelmc.translator.packet.entity;
 
+import java.util.UUID;
+
 import org.cloudburstmc.protocol.bedrock.packet.AddEntityPacket;
 
-import me.THEREALWWEFAN231.tunnelmc.TunnelMC;
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.tunnelmc.translator.EntityTranslator;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 
 public class AddEntityPacketTranslator extends PacketTranslator<AddEntityPacket> {
-	
+
 	//TODO: handle non living entities differently, EntitySpawnS2CPacket
-	
-	@SuppressWarnings("unchecked")
+
 	@Override
 	public void translate(AddEntityPacket packet) {
 
@@ -24,7 +23,7 @@ public class AddEntityPacketTranslator extends PacketTranslator<AddEntityPacket>
 			System.out.println("Could not find entity type " + packet.getIdentifier());
 			return;
 		} else {
-			
+
 			int id = (int) packet.getUniqueEntityId();
 			double x = packet.getPosition().getX();
 			double y = packet.getPosition().getY();
@@ -34,15 +33,10 @@ public class AddEntityPacketTranslator extends PacketTranslator<AddEntityPacket>
 			double motionZ = packet.getMotion().getZ();
 			float yaw = packet.getRotation().getY();//TODO: not sure about these
 			float pitch = packet.getRotation().getX();
-			
-			Entity entity = entityType.create(TunnelMC.mc.world);
-			entity.setEntityId(id);
-			entity.setPos(x, y, z);
-			entity.setVelocity(motionX, motionY, motionZ);
-			entity.yaw = yaw;
-			entity.pitch = pitch;
-			
-			Client.instance.javaConnection.processServerToClientPacket((Packet<ClientPlayPacketListener>) entity.createSpawnPacket());
+
+			ClientboundAddEntityPacket clientboundAddEntityPacket = new ClientboundAddEntityPacket(id, UUID.randomUUID(), x, y, z, pitch, yaw, entityType, 0, new Vec3(motionX, motionY, motionZ), yaw);
+
+			Client.instance.javaConnection.processServerToClientPacket(clientboundAddEntityPacket);
 		}
 
 	}
