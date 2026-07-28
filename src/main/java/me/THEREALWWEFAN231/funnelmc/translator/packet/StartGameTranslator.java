@@ -17,6 +17,7 @@ import me.THEREALWWEFAN231.funnelmc.translator.PacketTranslator;
 import me.THEREALWWEFAN231.funnelmc.translator.dimension.DimensionTranslator;
 import me.THEREALWWEFAN231.funnelmc.translator.gamemode.GameModeTranslator;
 import net.minecraft.core.Holder;
+import net.minecraft.network.protocol.game.ClientboundGameEventPacket;
 import net.minecraft.network.protocol.game.ClientboundSetChunkCacheCenterPacket;
 import net.minecraft.network.protocol.game.ClientboundLoginPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
@@ -75,6 +76,14 @@ public class StartGameTranslator extends PacketTranslator<StartGamePacket> {
 		Client.instance.javaConnection.processServerToClientPacket(clientboundLoginPacket);
 
 		Client.instance.onPlayerInitialized();
+
+		// Real Java servers send this the moment they start streaming chunks - ClientPacketListener's
+		// LevelLoadTracker starts in a WaitingForServer state with no timeout at all, and only moves to
+		// a state with one (WaitingForPlayerChunk, 30s) once this arrives. Without it the "Loading
+		// terrain" screen never dismisses no matter how many chunks actually load, since nothing ever
+		// advances the tracker past its initial state.
+		Client.instance.javaConnection.processServerToClientPacket(
+				new ClientboundGameEventPacket(ClientboundGameEventPacket.LEVEL_CHUNKS_LOAD_START, 0));
 
 		//TODO send a complete tag sync packet - that way water can work
 
