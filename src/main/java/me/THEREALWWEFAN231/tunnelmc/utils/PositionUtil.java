@@ -10,7 +10,7 @@ public class PositionUtil {
     }
 
     public static BlockPos toBlockPos(Vector3f vector) {
-        return new BlockPos(vector.getX(), vector.getY(), vector.getZ());
+        return BlockPos.containing(vector.getX(), vector.getY(), vector.getZ());
     }
 
     public static Vector3i toBedrockVector3i(BlockPos blockPos) {

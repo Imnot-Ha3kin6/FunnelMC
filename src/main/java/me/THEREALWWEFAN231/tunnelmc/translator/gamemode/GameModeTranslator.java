@@ -15,8 +15,8 @@ public class GameModeTranslator {
 				return net.minecraft.world.level.GameType.CREATIVE;
 			case ADVENTURE:
 				return net.minecraft.world.level.GameType.ADVENTURE;
-			case WORLD_DEFAULT:
-				return GameModeTranslator.bedrockToJava(worldDefaultGameType, worldDefaultGameType);
+			case SPECTATOR:
+				return net.minecraft.world.level.GameType.SPECTATOR;
 		}
 
 		return null;

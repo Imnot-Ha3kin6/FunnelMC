@@ -49,7 +49,7 @@ public class SkinData {
 			skinData.addProperty("DeviceId", UUID.randomUUID().toString());
 			skinData.addProperty("DeviceModel", "");
 			skinData.addProperty("DeviceOS", 7);//windows 10?
-			skinData.addProperty("GameVersion", Client.instance.bedrockPacketCodec.getMinecraftVersion());
+			skinData.addProperty("GameVersion", Client.instance.bedrockCodec.getMinecraftVersion());
 			skinData.addProperty("GuiScale", 0);
 			skinData.addProperty("LanguageCode", "en_US");
 			skinData.add("PersonaPieces", new JsonArray());

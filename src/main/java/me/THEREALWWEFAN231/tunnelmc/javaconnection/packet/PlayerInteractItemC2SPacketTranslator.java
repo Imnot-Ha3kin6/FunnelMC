@@ -41,7 +41,6 @@ public class PlayerInteractItemC2SPacketTranslator extends PacketTranslator<Serv
 			useInventoryTransactionPacket.setItemInHand(usingItem);
 			useInventoryTransactionPacket.setPlayerPosition(Vector3f.from(TunnelMC.mc.player.getX(), TunnelMC.mc.player.getY() + TunnelMC.mc.player.getEyeHeight(Pose.STANDING), TunnelMC.mc.player.getZ()));
 			useInventoryTransactionPacket.setClickPosition(Vector3f.from(sideHitOffset.x, sideHitOffset.y, sideHitOffset.z));
-			useInventoryTransactionPacket.setBlockRuntimeId(0);//TODO: get the runtime id of the block we are holding(i actually think its the block we are right clicking not holding, in that case its easier), currently works(on nukkit) with it being zero, but we *should* do it correctly
 			Client.instance.sendPacket(useInventoryTransactionPacket);
 
 		} else {

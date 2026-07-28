@@ -10,7 +10,7 @@ public class ChunkRadiusUpdatedTranslator extends PacketTranslator<ChunkRadiusUp
 
 	@Override
 	public void translate(ChunkRadiusUpdatedPacket packet) {
-		Client.instance.javaConnection.processServerToClientPacket(new ChunkLoadDistanceS2CPacket(packet.getRadius()));
+		Client.instance.javaConnection.processServerToClientPacket(new ClientboundSetChunkCacheRadiusPacket(packet.getRadius()));
 	}
 
 	@Override

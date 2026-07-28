@@ -27,7 +27,7 @@ public class Pow2BitArray implements BitArray {
 		this.size = size;
 		this.version = version;
 		this.words = words;
-		int expectedWordsLength = MathHelper.ceil((float) size / version.entriesPerWord);
+		int expectedWordsLength = Mth.ceil((float) size / version.entriesPerWord);
 		if (words.length != expectedWordsLength) {
 			throw new IllegalArgumentException("Invalid length given for storage, got: " + words.length + " but expected: " + expectedWordsLength);
 		}

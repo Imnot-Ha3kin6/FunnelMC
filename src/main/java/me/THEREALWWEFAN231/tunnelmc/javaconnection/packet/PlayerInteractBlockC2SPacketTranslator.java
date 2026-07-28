@@ -36,7 +36,6 @@ public class PlayerInteractBlockC2SPacketTranslator extends PacketTranslator<Ser
 		placeInventoryTransactionPacket.setItemInHand(placingItem);
 		placeInventoryTransactionPacket.setPlayerPosition(Vector3f.from(TunnelMC.mc.player.getX(), TunnelMC.mc.player.getY() + TunnelMC.mc.player.getEyeHeight(Pose.STANDING), TunnelMC.mc.player.getZ()));
 		placeInventoryTransactionPacket.setClickPosition(Vector3f.from(sideHitOffset.x, sideHitOffset.y, sideHitOffset.z));
-		placeInventoryTransactionPacket.setBlockRuntimeId(0);//TODO: get the runtime id of the block we are holding(i actually think its the block we are right clicking not holding, in that case its easier), currently works(on nukkit) with it being zero, but we *should* do it correctly
 		Client.instance.sendPacket(placeInventoryTransactionPacket);
 
 		//when using proxy pass and spying on the client it sends 2 InventoryTransactionPackets
@@ -49,7 +48,6 @@ public class PlayerInteractBlockC2SPacketTranslator extends PacketTranslator<Ser
 		idkInventoryTransactionPacket.setItemInHand(placingItem);
 		idkInventoryTransactionPacket.setPlayerPosition(Vector3f.from(TunnelMC.mc.player.getX(), TunnelMC.mc.player.getY() + TunnelMC.mc.player.getEyeHeight(Pose.STANDING), TunnelMC.mc.player.getZ()));
 		idkInventoryTransactionPacket.setClickPosition(Vector3f.ZERO);
-		idkInventoryTransactionPacket.setBlockRuntimeId(0);
 
 		Client.instance.sendPacket(idkInventoryTransactionPacket);
 

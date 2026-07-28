@@ -73,7 +73,7 @@ public class Client {
 
 		future.addListener(result -> {
 			if (!result.isSuccess()) {
-				Minecraft.getInstance().execute(() -> Minecraft.getInstance().disconnect(new DisconnectedScreen(Minecraft.getInstance().screen, Component.literal("Use Translated Here"), Component.literal(result.cause().getMessage())), false));
+				Minecraft.getInstance().execute(() -> Minecraft.getInstance().disconnect(new DisconnectedScreen(Minecraft.getInstance().gui.screen(), Component.literal("Use Translated Here"), Component.literal(result.cause().getMessage())), false));
 			}
 		});
 	}

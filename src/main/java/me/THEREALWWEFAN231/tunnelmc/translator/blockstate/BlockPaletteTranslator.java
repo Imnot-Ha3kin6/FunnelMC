@@ -43,7 +43,7 @@ public class BlockPaletteTranslator {
 				}
 			} else {
 				System.out.println("Unable to find suitable block state for " + bedrockBlockState.toString());
-				RUNTIME_ID_TO_BLOCK_STATE.put(runtimeId, Blocks.STONE.getDefaultState());//we could probably put the default state, but for now we will use stone
+				RUNTIME_ID_TO_BLOCK_STATE.put(runtimeId, Blocks.STONE.defaultBlockState());//we could probably put the default state, but for now we will use stone
 			}
 
 			runtimeId++;
