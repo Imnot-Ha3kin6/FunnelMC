@@ -66,7 +66,14 @@ public class BedrockConnectionScreen extends Screen {
 			port = 19132;
 		}
 
-		Client.instance.initialize(this.addressField.getValue(), port, this.onlineModeWidget.selected());
+		boolean onlineMode = this.onlineModeWidget.selected();
+		if (onlineMode) {
+			DeviceCodeLoginScreen loginScreen = new DeviceCodeLoginScreen(this.parent);
+			this.minecraft.setScreenAndShow(loginScreen);
+			Client.instance.initialize(this.addressField.getValue(), port, true, loginScreen);
+		} else {
+			Client.instance.initialize(this.addressField.getValue(), port, false);
+		}
 	}
 
 	@Override

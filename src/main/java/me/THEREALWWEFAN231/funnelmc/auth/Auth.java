@@ -31,14 +31,15 @@ public class Auth {
 	private UUID identity;
 	private String displayName;
 
-	public List<String> getOnlineChainData() throws Exception {
+	// msaAccessToken comes from DeviceCodeAuth.pollForAccessToken() - see Client#initialize
+	public List<String> getOnlineChainData(String msaAccessToken) throws Exception {
 		Gson gson = FunnelMC.instance.fileManagement.normalGson;
 
 		KeyPair ecdsa256KeyPair = Auth.createKeyPair();//for xbox live, xbox live requests use, ES256, ECDSA256
 		this.publicKey = (ECPublicKey) ecdsa256KeyPair.getPublic();
 		this.privateKey = (ECPrivateKey) ecdsa256KeyPair.getPrivate();
 
-		Xbox xbox = new Xbox(System.getProperty("XboxAccessToken"));
+		Xbox xbox = new Xbox(msaAccessToken);
 		String userToken = xbox.getUserToken(this.publicKey, this.privateKey);
 		String deviceToken = xbox.getDeviceToken(this.publicKey, this.privateKey);
 		String titleToken = xbox.getTitleToken(this.publicKey, this.privateKey, deviceToken);

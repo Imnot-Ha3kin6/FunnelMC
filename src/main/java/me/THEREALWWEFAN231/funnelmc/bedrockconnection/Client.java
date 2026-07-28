@@ -20,8 +20,11 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import org.cloudburstmc.netty.channel.raknet.RakChannelFactory;
 
+import java.util.List;
+
 import me.THEREALWWEFAN231.funnelmc.FunnelMC;
 import me.THEREALWWEFAN231.funnelmc.auth.Auth;
+import me.THEREALWWEFAN231.funnelmc.auth.DeviceCodeAuth;
 import me.THEREALWWEFAN231.funnelmc.auth.SkinData;
 import me.THEREALWWEFAN231.funnelmc.bedrockconnection.caches.BlockEntityDataCache;
 import me.THEREALWWEFAN231.funnelmc.bedrockconnection.caches.container.BedrockContainers;
@@ -46,15 +49,65 @@ public class Client {
 	public BlockEntityDataCache blockEntityDataCache;
 	public byte openContainerId;
 
+	private List<String> onlineChainData;
+
+	// Callbacks for showing a device-code login screen while online-mode auth is in progress.
+	// All three fire on the render thread.
+	public interface AuthListener {
+		void onDeviceCode(DeviceCodeAuth.DeviceCodeInfo deviceCodeInfo);
+		void onAuthComplete();
+		void onAuthFailed(Exception e);
+	}
+
 	public void initialize(String ip, int port, boolean onlineMode) {
+		this.initialize(ip, port, onlineMode, null);
+	}
+
+	public void initialize(String ip, int port, boolean onlineMode, AuthListener authListener) {
 		this.ip = ip;
 		this.port = port;
 		this.onlineMode = onlineMode;
 
+		if (!onlineMode) {
+			this.connect();
+			return;
+		}
+
+		// Do the Microsoft/Xbox Live login before opening the actual Bedrock connection - the
+		// device code flow can take minutes (the player has to go log in in a browser), and we
+		// don't want to be holding a raw connection open to the target server the whole time.
+		new Thread(() -> {
+			try {
+				this.authData = new Auth();
+
+				DeviceCodeAuth.DeviceCodeInfo deviceCodeInfo = DeviceCodeAuth.requestDeviceCode();
+				if (authListener != null) {
+					Minecraft.getInstance().execute(() -> authListener.onDeviceCode(deviceCodeInfo));
+				}
+
+				String msaAccessToken = DeviceCodeAuth.pollForAccessToken(deviceCodeInfo);
+				this.onlineChainData = this.authData.getOnlineChainData(msaAccessToken);
+
+				Minecraft.getInstance().execute(() -> {
+					if (authListener != null) {
+						authListener.onAuthComplete();
+					}
+					this.connect();
+				});
+			} catch (Exception e) {
+				e.printStackTrace();
+				if (authListener != null) {
+					Minecraft.getInstance().execute(() -> authListener.onAuthFailed(e));
+				}
+			}
+		}, "FunnelMC-Auth").start();
+	}
+
+	private void connect() {
 		org.apache.logging.log4j.core.Logger logger = (org.apache.logging.log4j.core.Logger) LogManager.getRootLogger();
 		logger.get().setLevel(Level.DEBUG);
 
-		InetSocketAddress addressToConnect = new InetSocketAddress(ip, port);
+		InetSocketAddress addressToConnect = new InetSocketAddress(this.ip, this.port);
 
 		ChannelFuture future = new Bootstrap()
 				.channelFactory(RakChannelFactory.client(NioDatagramChannel.class))
@@ -84,10 +137,10 @@ public class Client {
 		try {
 			LoginPacket loginPacket = new LoginPacket();
 
-			this.authData = new Auth();
 			if (this.onlineMode) {
-				loginPacket.setAuthPayload(new CertificateChainPayload(this.authData.getOnlineChainData()));
+				loginPacket.setAuthPayload(new CertificateChainPayload(this.onlineChainData));
 			} else {
+				this.authData = new Auth();
 				loginPacket.setAuthPayload(new CertificateChainPayload(this.authData.getOfflineChainData(Minecraft.getInstance().getUser().getName())));
 			}
 

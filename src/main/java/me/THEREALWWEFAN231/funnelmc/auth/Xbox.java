@@ -31,8 +31,7 @@ import me.THEREALWWEFAN231.funnelmc.bedrockconnection.Client;
 //based off https://github.com/Sandertv/gophertunnel/tree/master/minecraft/auth
 public class Xbox {
 
-	//go here, log in, and in the redirected url you will have your access token, https://login.live.com/oauth20_authorize.srf?client_id=00000000441cc96b&redirect_uri=https://login.live.com/oauth20_desktop.srf&response_type=token&display=touch&scope=service::user.auth.xboxlive.com::MBI_SSL&locale=en
-	//then add -DXboxAccessToken=YOURS to your jvm arguments
+	// accessToken is the Microsoft access token obtained via DeviceCodeAuth's device code flow.
 	private final String accessToken;
 
 	private static final String xboxUserAuthURL = "https://user.auth.xboxlive.com/user/authenticate";
