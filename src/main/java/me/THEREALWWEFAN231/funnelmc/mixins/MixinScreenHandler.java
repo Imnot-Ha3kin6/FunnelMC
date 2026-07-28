@@ -1,7 +1,8 @@
 package me.THEREALWWEFAN231.funnelmc.mixins;
 
-import java.util.List;
 import java.util.Set;
+
+import net.minecraft.core.NonNullList;
 
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -256,7 +257,7 @@ public class MixinScreenHandler {
 	private Set<Slot> quickcraftSlots;
 	@Shadow
 	@Final
-	public List<Slot> slots;
+	public NonNullList<Slot> slots;
 
 	@Shadow
 	protected void resetQuickCraft() {

@@ -9,11 +9,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 import me.THEREALWWEFAN231.funnelmc.bedrockconnection.Client;
 import net.minecraft.network.Connection;
+import net.minecraft.network.DisconnectionDetails;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket;
 import net.minecraft.network.protocol.common.ClientboundPingPacket;
@@ -25,24 +25,23 @@ public class MixinClientConnection {
 	@Shadow
 	private Channel channel;
 
-	@Shadow private Component disconnectReason;
+	@Shadow private DisconnectionDetails disconnectionDetails;
 
-	@Inject(method = "isOpen", at = @At("HEAD"), cancellable = true)
-	public void isOpen(CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
+	@Inject(method = "isConnected", at = @At("HEAD"), cancellable = true)
+	public void isConnected(CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
 		if (Client.instance.isConnectionOpen()) {
 			callbackInfoReturnable.setReturnValue(true);
 		}
 	}
 
-	@Inject(method = "isEncrypted", at = @At("HEAD"), cancellable = true)
-	public void isEncrypted(CallbackInfoReturnable<Boolean> callbackInfoReturnable) {//this allows player skins to be seen in the PlayerListHud
-		if (Client.instance.isConnectionOpen()) {
-			callbackInfoReturnable.setReturnValue(true);
-		}
-	}
+	// TODO: Connection no longer has an isEncrypted() method to hook (it was removed/reworked in
+	// modern MC), so the "fake encryption" trick that used to make skins show up in the player
+	// list HUD no longer applies here. Skin visibility needs to be re-checked against whatever
+	// mechanism replaced it (likely resolved via PlayerInfo/GameProfile properties now, not a
+	// connection-level encrypted flag).
 
-	@Inject(method = "sendImmediately", at = @At("HEAD"), cancellable = true)
-	private void sendImmediately(Packet<?> packet, GenericFutureListener<? extends Future<? super Void>> callback, CallbackInfo callbackInfo) {
+	@Inject(method = "send(Lnet/minecraft/network/protocol/Packet;Lio/netty/channel/ChannelFutureListener;Z)V", at = @At("HEAD"), cancellable = true)
+	private void send(Packet<?> packet, ChannelFutureListener callback, boolean flush, CallbackInfo callbackInfo) {
 		if (Client.instance.isConnectionOpen()) {
 			Client.instance.javaConnection.packetTranslatorManager.translatePacket(packet);
 			callbackInfo.cancel();
@@ -66,7 +65,7 @@ public class MixinClientConnection {
 		if (Client.instance.isConnectionOpen()) {
 			// this.channel is null here
 			Client.instance.bedrockSession.disconnect();
-			this.disconnectReason = disconnectReason;
+			this.disconnectionDetails = new DisconnectionDetails(disconnectReason);
 			ci.cancel();
 		}
 	}
