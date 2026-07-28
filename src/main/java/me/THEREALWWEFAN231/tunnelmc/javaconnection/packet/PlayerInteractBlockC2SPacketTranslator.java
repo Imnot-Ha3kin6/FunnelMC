@@ -14,27 +14,27 @@ import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 
-public class PlayerInteractBlockC2SPacketTranslator extends PacketTranslator<PlayerInteractBlockC2SPacket> {
+public class PlayerInteractBlockC2SPacketTranslator extends PacketTranslator<ServerboundUseItemOnPacket> {
 
 	//TODO: so when ever we jump then place a block under us, our head freaks out(to other players), on nukkit servers(probably all), not fully sure why, maybe because we aren't sending PlayerActionPacket.JUMP
 
 	@Override
-	public void translate(PlayerInteractBlockC2SPacket packet) {
+	public void translate(ServerboundUseItemOnPacket packet) {
 
-		BlockPos blockPos = packet.getBlockHitResult().getBlockPos();
+		BlockPos blockPos = packet.getHitResult().getBlockPos();
 		Vector3i blockPosition = Vector3i.from(blockPos.getX(), blockPos.getY(), blockPos.getZ());
-		Vec3d sideHitOffset = packet.getBlockHitResult().getPos().subtract(blockPos.getX(), blockPos.getY(), blockPos.getZ());
+		Vec3 sideHitOffset = packet.getHitResult().getLocation().subtract(blockPos.getX(), blockPos.getY(), blockPos.getZ());
 
-		ItemData placingItem = Client.instance.containers.getPlayerInventory().getItemFromSlot(TunnelMC.mc.player.inventory.selectedSlot);
+		ItemData placingItem = Client.instance.containers.getPlayerInventory().getItemFromSlot(TunnelMC.mc.player.getInventory().getSelectedSlot());
 
 		InventoryTransactionPacket placeInventoryTransactionPacket = new InventoryTransactionPacket();
 		placeInventoryTransactionPacket.setTransactionType(InventoryTransactionType.ITEM_USE);
 		placeInventoryTransactionPacket.setActionType(0);
 		placeInventoryTransactionPacket.setBlockPosition(blockPosition);
-		placeInventoryTransactionPacket.setBlockFace(packet.getBlockHitResult().getSide().ordinal());
-		placeInventoryTransactionPacket.setHotbarSlot(TunnelMC.mc.player.inventory.selectedSlot);
+		placeInventoryTransactionPacket.setBlockFace(packet.getHitResult().getDirection().ordinal());
+		placeInventoryTransactionPacket.setHotbarSlot(TunnelMC.mc.player.getInventory().getSelectedSlot());
 		placeInventoryTransactionPacket.setItemInHand(placingItem);
-		placeInventoryTransactionPacket.setPlayerPosition(Vector3f.from(TunnelMC.mc.player.getPos().x, TunnelMC.mc.player.getPos().y + TunnelMC.mc.player.getEyeHeight(EntityPose.STANDING), TunnelMC.mc.player.getPos().z));
+		placeInventoryTransactionPacket.setPlayerPosition(Vector3f.from(TunnelMC.mc.player.getX(), TunnelMC.mc.player.getY() + TunnelMC.mc.player.getEyeHeight(Pose.STANDING), TunnelMC.mc.player.getZ()));
 		placeInventoryTransactionPacket.setClickPosition(Vector3f.from(sideHitOffset.x, sideHitOffset.y, sideHitOffset.z));
 		placeInventoryTransactionPacket.setBlockRuntimeId(0);//TODO: get the runtime id of the block we are holding(i actually think its the block we are right clicking not holding, in that case its easier), currently works(on nukkit) with it being zero, but we *should* do it correctly
 		Client.instance.sendPacket(placeInventoryTransactionPacket);
@@ -45,9 +45,9 @@ public class PlayerInteractBlockC2SPacketTranslator extends PacketTranslator<Pla
 		idkInventoryTransactionPacket.setActionType(1);
 		idkInventoryTransactionPacket.setBlockPosition(Vector3i.ZERO);
 		idkInventoryTransactionPacket.setBlockFace(255);
-		idkInventoryTransactionPacket.setHotbarSlot(TunnelMC.mc.player.inventory.selectedSlot);
+		idkInventoryTransactionPacket.setHotbarSlot(TunnelMC.mc.player.getInventory().getSelectedSlot());
 		idkInventoryTransactionPacket.setItemInHand(placingItem);
-		idkInventoryTransactionPacket.setPlayerPosition(Vector3f.from(TunnelMC.mc.player.getPos().x, TunnelMC.mc.player.getPos().y + TunnelMC.mc.player.getEyeHeight(EntityPose.STANDING), TunnelMC.mc.player.getPos().z));
+		idkInventoryTransactionPacket.setPlayerPosition(Vector3f.from(TunnelMC.mc.player.getX(), TunnelMC.mc.player.getY() + TunnelMC.mc.player.getEyeHeight(Pose.STANDING), TunnelMC.mc.player.getZ()));
 		idkInventoryTransactionPacket.setClickPosition(Vector3f.ZERO);
 		idkInventoryTransactionPacket.setBlockRuntimeId(0);
 
@@ -57,7 +57,7 @@ public class PlayerInteractBlockC2SPacketTranslator extends PacketTranslator<Pla
 
 	@Override
 	public Class<?> getPacketClass() {
-		return PlayerInteractBlockC2SPacket.class;
+		return ServerboundUseItemOnPacket.class;
 	}
 
 }

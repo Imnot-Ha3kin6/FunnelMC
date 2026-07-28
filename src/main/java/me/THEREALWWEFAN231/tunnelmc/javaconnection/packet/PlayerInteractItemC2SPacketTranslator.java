@@ -16,30 +16,30 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 
-public class PlayerInteractItemC2SPacketTranslator extends PacketTranslator<PlayerInteractItemC2SPacket> {
+public class PlayerInteractItemC2SPacketTranslator extends PacketTranslator<ServerboundUseItemPacket> {
 
 	//TODO: im not even fully sure about this, i dont really have any means to test it currently
 	//actually i think i could test it on a chest, i should do that sometime
 
 	@Override
-	public void translate(PlayerInteractItemC2SPacket packet) {
-		
-		ItemData usingItem = Client.instance.containers.getPlayerInventory().getItemFromSlot(TunnelMC.mc.player.inventory.selectedSlot);
+	public void translate(ServerboundUseItemPacket packet) {
 
-		if (TunnelMC.mc.crosshairTarget.getType() == HitResult.Type.BLOCK) {
-			BlockPos blockPos = ((BlockHitResult) TunnelMC.mc.crosshairTarget).getBlockPos();
+		ItemData usingItem = Client.instance.containers.getPlayerInventory().getItemFromSlot(TunnelMC.mc.player.getInventory().getSelectedSlot());
+
+		if (TunnelMC.mc.hitResult.getType() == HitResult.Type.BLOCK) {
+			BlockPos blockPos = ((BlockHitResult) TunnelMC.mc.hitResult).getBlockPos();
 			Vector3i blockPosition = Vector3i.from(blockPos.getX(), blockPos.getY(), blockPos.getZ());
 
-			Vec3d sideHitOffset = ((BlockHitResult) TunnelMC.mc.crosshairTarget).getPos().subtract(blockPos.getX(), blockPos.getY(), blockPos.getZ());
+			Vec3 sideHitOffset = ((BlockHitResult) TunnelMC.mc.hitResult).getLocation().subtract(blockPos.getX(), blockPos.getY(), blockPos.getZ());
 
 			InventoryTransactionPacket useInventoryTransactionPacket = new InventoryTransactionPacket();
 			useInventoryTransactionPacket.setTransactionType(InventoryTransactionType.ITEM_USE);
 			useInventoryTransactionPacket.setActionType(0);
 			useInventoryTransactionPacket.setBlockPosition(blockPosition);
-			useInventoryTransactionPacket.setBlockFace(((BlockHitResult) TunnelMC.mc.crosshairTarget).getSide().ordinal());
-			useInventoryTransactionPacket.setHotbarSlot(TunnelMC.mc.player.inventory.selectedSlot);
+			useInventoryTransactionPacket.setBlockFace(((BlockHitResult) TunnelMC.mc.hitResult).getDirection().ordinal());
+			useInventoryTransactionPacket.setHotbarSlot(TunnelMC.mc.player.getInventory().getSelectedSlot());
 			useInventoryTransactionPacket.setItemInHand(usingItem);
-			useInventoryTransactionPacket.setPlayerPosition(Vector3f.from(TunnelMC.mc.player.getPos().x, TunnelMC.mc.player.getPos().y + TunnelMC.mc.player.getEyeHeight(EntityPose.STANDING), TunnelMC.mc.player.getPos().z));
+			useInventoryTransactionPacket.setPlayerPosition(Vector3f.from(TunnelMC.mc.player.getX(), TunnelMC.mc.player.getY() + TunnelMC.mc.player.getEyeHeight(Pose.STANDING), TunnelMC.mc.player.getZ()));
 			useInventoryTransactionPacket.setClickPosition(Vector3f.from(sideHitOffset.x, sideHitOffset.y, sideHitOffset.z));
 			useInventoryTransactionPacket.setBlockRuntimeId(0);//TODO: get the runtime id of the block we are holding(i actually think its the block we are right clicking not holding, in that case its easier), currently works(on nukkit) with it being zero, but we *should* do it correctly
 			Client.instance.sendPacket(useInventoryTransactionPacket);
@@ -52,9 +52,9 @@ public class PlayerInteractItemC2SPacketTranslator extends PacketTranslator<Play
 			inventoryTransactionPacket.setActionType(1);
 			inventoryTransactionPacket.setBlockPosition(Vector3i.ZERO);
 			inventoryTransactionPacket.setBlockFace(255);
-			inventoryTransactionPacket.setHotbarSlot(TunnelMC.mc.player.inventory.selectedSlot);
+			inventoryTransactionPacket.setHotbarSlot(TunnelMC.mc.player.getInventory().getSelectedSlot());
 			inventoryTransactionPacket.setItemInHand(usingItem);
-			inventoryTransactionPacket.setPlayerPosition(Vector3f.from(TunnelMC.mc.player.getPos().x, TunnelMC.mc.player.getPos().y + TunnelMC.mc.player.getEyeHeight(EntityPose.STANDING), TunnelMC.mc.player.getPos().z));
+			inventoryTransactionPacket.setPlayerPosition(Vector3f.from(TunnelMC.mc.player.getX(), TunnelMC.mc.player.getY() + TunnelMC.mc.player.getEyeHeight(Pose.STANDING), TunnelMC.mc.player.getZ()));
 			inventoryTransactionPacket.setClickPosition(Vector3f.ZERO);
 
 			Client.instance.sendPacket(inventoryTransactionPacket);
@@ -64,7 +64,7 @@ public class PlayerInteractItemC2SPacketTranslator extends PacketTranslator<Play
 
 	@Override
 	public Class<?> getPacketClass() {
-		return PlayerInteractItemC2SPacket.class;
+		return ServerboundUseItemPacket.class;
 	}
 
 }
