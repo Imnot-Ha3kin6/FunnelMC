@@ -3,6 +3,7 @@ package me.THEREALWWEFAN231.funnelmc;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import me.THEREALWWEFAN231.funnelmc.debug.LoadTrackerDiagnostics;
 import me.THEREALWWEFAN231.funnelmc.translator.EntityTranslator;
 import me.THEREALWWEFAN231.funnelmc.translator.PacketTranslatorManager;
 import me.THEREALWWEFAN231.funnelmc.translator.blockentity.BlockEntityRegistry;
@@ -24,7 +25,7 @@ public class FunnelMC {
 	// Bumped by hand on every build sent to the tester - logged first thing on startup so a fresh
 	// funnelmc.log can always be checked against this string to confirm which jar actually produced
 	// it, instead of guessing from error line numbers whether an old build is still in use.
-	public static final String BUILD_ID = "null-blockstate-guard-2026-07-28";
+	public static final String BUILD_ID = "loadtracker-diag-2026-07-28";
 
 	public FileManagement fileManagement;
 	public PacketTranslatorManager packetTranslatorManager;
@@ -45,6 +46,7 @@ public class FunnelMC {
 		EnchantmentTranslator.load();
 		ScreenHandlerTranslatorManager.load();
 		new PlayerAuthInputSender();
+		new LoadTrackerDiagnostics();
 	}
 
 }
