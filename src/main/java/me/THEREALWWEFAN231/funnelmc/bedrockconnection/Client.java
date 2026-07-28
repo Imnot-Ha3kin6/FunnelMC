@@ -10,6 +10,7 @@ import org.cloudburstmc.protocol.bedrock.BedrockClientSession;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodec;
 import org.cloudburstmc.protocol.bedrock.codec.v1001.Bedrock_v1001;
 import org.cloudburstmc.protocol.bedrock.data.AuthoritativeMovementMode;
+import org.cloudburstmc.protocol.bedrock.data.EncodingSettings;
 import org.cloudburstmc.protocol.bedrock.data.auth.AuthType;
 import org.cloudburstmc.protocol.bedrock.data.auth.CertificateChainPayload;
 import org.cloudburstmc.protocol.bedrock.netty.initializer.BedrockClientInitializer;
@@ -158,6 +159,15 @@ public class Client {
 
 	public void onSessionInitialized(BedrockClientSession bedrockSession) {
 		this.bedrockSession = bedrockSession;
+
+		// The codec helper defaults to EncodingSettings.DEFAULT (maxListSize=1536), sized for a
+		// generic/server-facing peer - but CreativeContentPacket's item catalog and
+		// ItemComponentPacket's per-item component list are both genuinely bigger than that in
+		// modern Minecraft (1800+ items/blocks), so real values over 1536 got rejected as if they
+		// were corrupt ("Tried to read N bytes but maximum is 1536"), when they were actually just
+		// legitimately large. EncodingSettings.CLIENT (maxListSize=10240) is the preset the library
+		// itself ships specifically for this - a Bedrock client receiving these large server-sent lists.
+		bedrockSession.getPeer().getCodecHelper().setEncodingSettings(EncodingSettings.CLIENT);
 
 		// Without this, quitting or crashing the game leaves the RakNet session dangling from the
 		// server's perspective until it times out server-side (tens of seconds) instead of dropping
