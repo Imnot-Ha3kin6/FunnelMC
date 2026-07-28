@@ -11,7 +11,6 @@ import org.cloudburstmc.protocol.bedrock.packet.RequestChunkRadiusPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SetLocalPlayerAsInitializedPacket;
 import org.cloudburstmc.protocol.bedrock.packet.StartGamePacket;
 
-import org.cloudburstmc.protocol.bedrock.packet.TickSyncPacket;
 import me.THEREALWWEFAN231.funnelmc.FunnelMC;
 import me.THEREALWWEFAN231.funnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.funnelmc.translator.PacketTranslator;
@@ -99,8 +98,6 @@ public class StartGameTranslator extends PacketTranslator<StartGamePacket> {
 		RequestChunkRadiusPacket requestChunkRadiusPacket = new RequestChunkRadiusPacket();
 		requestChunkRadiusPacket.setRadius(FunnelMC.mc.options.renderDistance().get());
 		Client.instance.sendPacketImmediately(requestChunkRadiusPacket);
-
-		Client.instance.sendPacketImmediately(new TickSyncPacket());
 
 		SetLocalPlayerAsInitializedPacket setLocalPlayerAsInitializedPacket = new SetLocalPlayerAsInitializedPacket();
 		setLocalPlayerAsInitializedPacket.setRuntimeEntityId(lastRunTimeId);
