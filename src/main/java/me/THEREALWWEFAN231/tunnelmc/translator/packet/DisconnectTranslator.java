@@ -3,19 +3,16 @@ package me.THEREALWWEFAN231.tunnelmc.translator.packet;
 import org.cloudburstmc.protocol.bedrock.packet.DisconnectPacket;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.DisconnectedScreen;
 import net.minecraft.network.chat.Component;
 
 public class DisconnectTranslator extends PacketTranslator<DisconnectPacket> {
     @Override
     public void translate(DisconnectPacket packet) {
-        if (MinecraftClient.getInstance().world != null) {
-            MinecraftClient.getInstance().world.disconnect();
+        if (Minecraft.getInstance().level != null) {
+            Minecraft.getInstance().disconnectFromWorld(Component.literal("Use Translated Here"));
         }
-        MinecraftClient.getInstance().execute(() ->
-                MinecraftClient.getInstance().disconnect(
-                        new DisconnectedScreen(MinecraftClient.getInstance().currentScreen, Text.of("Use Translated Here"),
-                                Text.of(packet.getKickMessage()))));
+        Minecraft.getInstance().execute(() ->
+                Minecraft.getInstance().disconnect(Component.literal(packet.getKickMessage())));
     }
 
     @Override

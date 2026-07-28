@@ -4,68 +4,58 @@ import org.cloudburstmc.protocol.bedrock.packet.MovePlayerPacket;
 
 import me.THEREALWWEFAN231.tunnelmc.TunnelMC;
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
-import me.THEREALWWEFAN231.tunnelmc.mixins.interfaces.IMixinEntityPositionS2CPacket;
-import me.THEREALWWEFAN231.tunnelmc.mixins.interfaces.IMixinEntitySetHeadYawS2CPacket;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.PositionMoveRotation;
+import net.minecraft.world.entity.Relative;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundRotateHeadPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
 
 import java.util.Collections;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class MovePlayerPacketTranslator extends PacketTranslator<MovePlayerPacket> {
-	private static final AtomicInteger teleportId = new AtomicInteger(1);
 
 	@Override
 	public void translate(MovePlayerPacket packet) {
 
 		int id = (int) packet.getRuntimeEntityId();
 		double x = packet.getPosition().getX();
-		double y = packet.getPosition().getY() - TunnelMC.mc.player.getEyeHeight(EntityPose.STANDING);
+		double y = packet.getPosition().getY() - TunnelMC.mc.player.getEyeHeight(Pose.STANDING);
 		double z = packet.getPosition().getZ();
 
-		float realYaw = packet.getRotation().getY();
-		byte yaw = (byte) ((int) (realYaw * 256.0F / 360.0F));
-		float realPitch = packet.getRotation().getX();
-		byte pitch = (byte) ((int) (realPitch * 256.0F / 360.0F));
+		float yaw = packet.getRotation().getY();
+		byte packedYaw = (byte) ((int) (yaw * 256.0F / 360.0F));
+		float pitch = packet.getRotation().getX();
 		boolean onGround = packet.isOnGround();
 
 		if (id == TunnelMC.mc.player.getEntityId()) {
 			// This works best
-			PlayerPositionLookS2CPacket positionPacket = new PlayerPositionLookS2CPacket(x, y, z, yaw, pitch, Collections.emptySet(), teleportId.getAndIncrement());
+			PositionMoveRotation positionMoveRotation = new PositionMoveRotation(new Vec3(x, y, z), Vec3.ZERO, yaw, pitch);
+			ClientboundPlayerPositionPacket positionPacket = new ClientboundPlayerPositionPacket(0, positionMoveRotation, Collections.emptySet());
 			Client.instance.javaConnection.processServerToClientPacket(positionPacket);
 			return;
 		}
 
-		EntityPositionS2CPacket entityPositionS2CPacket = new EntityPositionS2CPacket();
-		IMixinEntityPositionS2CPacket iMixinEntityPositionS2CPacket = (IMixinEntityPositionS2CPacket) entityPositionS2CPacket;
+		PositionMoveRotation positionMoveRotation = new PositionMoveRotation(new Vec3(x, y, z), Vec3.ZERO, yaw, pitch);
+		ClientboundTeleportEntityPacket clientboundTeleportEntityPacket = new ClientboundTeleportEntityPacket(id, positionMoveRotation, Collections.<Relative>emptySet(), onGround);
 
-		iMixinEntityPositionS2CPacket.setId(id);
-		iMixinEntityPositionS2CPacket.setX(x);
-		iMixinEntityPositionS2CPacket.setY(y);
-		iMixinEntityPositionS2CPacket.setZ(z);
-		iMixinEntityPositionS2CPacket.setYaw(yaw);
-		iMixinEntityPositionS2CPacket.setPitch(pitch);
-		iMixinEntityPositionS2CPacket.setOnGround(onGround);
+		Client.instance.javaConnection.processServerToClientPacket(clientboundTeleportEntityPacket);
 
-		Client.instance.javaConnection.processServerToClientPacket(entityPositionS2CPacket);
-
-		EntitySetHeadYawS2CPacket entitySetHeadYawS2CPacket = new EntitySetHeadYawS2CPacket();
-		IMixinEntitySetHeadYawS2CPacket iMixinEntitySetHeadYawS2CPacket = (IMixinEntitySetHeadYawS2CPacket) entitySetHeadYawS2CPacket;
-
-		iMixinEntitySetHeadYawS2CPacket.setEntityId(id);
-		iMixinEntitySetHeadYawS2CPacket.setYaw(yaw);
-
-		Client.instance.javaConnection.processServerToClientPacket(entitySetHeadYawS2CPacket);
+		Entity entity = TunnelMC.mc.level != null ? TunnelMC.mc.level.getEntity(id) : null;
+		if (entity != null) {
+			ClientboundRotateHeadPacket clientboundRotateHeadPacket = new ClientboundRotateHeadPacket(entity, packedYaw);
+			Client.instance.javaConnection.processServerToClientPacket(clientboundRotateHeadPacket);
+		}
 	}
 
 	@Override
 	public Class<?> getPacketClass() {
 		return MovePlayerPacket.class;
 	}
-	
+
 	@Override
 	public boolean idleUntil() {
 		return TunnelMC.mc.player != null;
