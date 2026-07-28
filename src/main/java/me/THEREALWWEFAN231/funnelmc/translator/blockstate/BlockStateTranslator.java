@@ -130,6 +130,10 @@ public class BlockStateTranslator {
 				String value = keyAndValueArray[1];
 
 				Property<?> property = block.getStateDefinition().getProperty(key);
+				if (property == null) {
+					System.out.println("Could not find the property " + key + " on " + javaBlockIdentifier + " " + blockStateInformation);
+					return null;
+				}
 
 				theBlockState = parsePropertyValue(theBlockState, property, value);
 				if (theBlockState == null) {
