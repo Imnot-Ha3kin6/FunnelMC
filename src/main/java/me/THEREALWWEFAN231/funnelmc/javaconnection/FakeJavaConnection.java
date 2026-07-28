@@ -7,7 +7,6 @@ import com.mojang.authlib.GameProfile;
 import me.THEREALWWEFAN231.funnelmc.FunnelMC;
 import me.THEREALWWEFAN231.funnelmc.bedrockconnection.Client;
 import net.minecraft.client.multiplayer.ClientPacketListener;
-import net.minecraft.client.multiplayer.ClientRegistryLayer;
 import net.minecraft.client.multiplayer.CommonListenerCookie;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.Connection;
@@ -27,12 +26,12 @@ public class FakeJavaConnection {
 		this.connection = new Connection(PacketFlow.CLIENTBOUND);
 		GameProfile gameProfile = new GameProfile(Client.instance.authData.getIdentity(), Client.instance.authData.getDisplayName());
 		// TODO: several of these cookie fields are placeholders (null/empty) since we have no
-		// real Java server to source them from. Registry access uses the same static/built-in
-		// layer vanilla itself falls back on before connecting to any server (item/block
-		// registries etc.) - ClientPacketListener's constructor needs at least that much (e.g.
-		// FuelValues reads the item registry); dynamic per-world registry data a real server
-		// would send just isn't available here.
-		RegistryAccess.Frozen registryAccess = ClientRegistryLayer.createRegistryAccess().compositeAccess();
+		// real Java server to source them from. Registry access is rebuilt from vanilla's bundled
+		// default data (see VanillaRegistryAccess) instead of a real server's registry-sync
+		// packets - ClientPacketListener's constructor and ClientLevel both require dynamic
+		// registries (worldgen/biome, worldgen/dimension_type, ...) to be present, not just the
+		// static item/block layer.
+		RegistryAccess.Frozen registryAccess = VanillaRegistryAccess.get();
 		CommonListenerCookie cookie = new CommonListenerCookie(null, gameProfile, null, registryAccess, FeatureFlags.VANILLA_SET, "funnelmc",
 				null, null, Collections.emptyMap(), null, Collections.emptyMap(), ServerLinks.EMPTY, Collections.emptyMap(), false);
 		this.clientPacketListener = new ClientPacketListener(FunnelMC.mc, this.connection, cookie);

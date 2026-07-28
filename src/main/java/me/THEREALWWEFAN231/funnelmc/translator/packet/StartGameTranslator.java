@@ -7,9 +7,11 @@ import java.util.Set;
 
 import org.cloudburstmc.protocol.bedrock.data.GameRuleData;
 import org.cloudburstmc.protocol.bedrock.data.GameType;
+import org.cloudburstmc.protocol.bedrock.data.definitions.ItemDefinition;
 import org.cloudburstmc.protocol.bedrock.packet.RequestChunkRadiusPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SetLocalPlayerAsInitializedPacket;
 import org.cloudburstmc.protocol.bedrock.packet.StartGamePacket;
+import org.cloudburstmc.protocol.common.SimpleDefinitionRegistry;
 
 import org.cloudburstmc.protocol.bedrock.packet.TickSyncPacket;
 import me.THEREALWWEFAN231.funnelmc.FunnelMC;
@@ -37,6 +39,14 @@ public class StartGameTranslator extends PacketTranslator<StartGamePacket> {
 
 	@Override
 	public void translate(StartGamePacket packet) {
+		// Every item-bearing packet that arrives after this one (CreativeContentPacket,
+		// ItemComponentPacket, CraftingDataPacket, AddItemEntityPacket, ...) gets decoded against
+		// this DefinitionRegistry - without it the codec NPEs on itemDefinitions being null the
+		// moment any of those packets shows up. Has to be set before this method returns since the
+		// next packet's decode happens on the same Netty thread right after.
+		Client.instance.bedrockSession.getPeer().getCodecHelper().setItemDefinitions(
+				SimpleDefinitionRegistry.<ItemDefinition>builder().addAll(packet.getItemDefinitions()).build());
+
 		int playerEntityId = (int) packet.getRuntimeEntityId();//not sure if we are suppose to use runtime id or unique id
 		lastRunTimeId = playerEntityId;
 
@@ -50,10 +60,7 @@ public class StartGameTranslator extends PacketTranslator<StartGamePacket> {
 		dimensionIds.add(Level.OVERWORLD);
 		dimensionIds.add(Level.END);
 		ResourceKey<Level> dimensionId = DimensionTranslator.bedrockToJavaRegistryKey(packet.getDimensionId());
-		// TODO: this needs a real Holder<DimensionType> sourced from bundled vanilla registry data
-		// (see DimensionTranslator) - modern DimensionType is fully registry/datapack driven and
-		// there's no live Java server here to pull it from.
-		Holder<DimensionType> dimensionType = null;
+		Holder<DimensionType> dimensionType = DimensionTranslator.bedrockToJavaDimensionType(packet.getDimensionId());
 		int maxPlayers = 999;
 		int chunkLoadDistance = 3;
 		int simulationDistance = chunkLoadDistance;

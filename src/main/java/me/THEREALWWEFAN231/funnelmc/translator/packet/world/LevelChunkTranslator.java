@@ -158,10 +158,12 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 		}
 
 		// TODO: biomes are no longer a flat per-chunk array in modern Minecraft (each LevelChunkSection
-		// carries its own PalettedContainerRO<Holder<Biome>>); for now we just consume the bytes off the
-		// wire and leave every section on its default biome, same as the pre-existing "TODO: biomes" gap.
-		byte[] bedrockBiomes = new byte[256];
-		byteBuf.readBytes(bedrockBiomes);
+		// carries its own PalettedContainerRO<Holder<Biome>>); for now we just consume the rest of the
+		// buffer and leave every section on its default biome, same as the pre-existing "TODO: biomes"
+		// gap. This is a per-subchunk palette in the modern Bedrock protocol, not a fixed-size flat
+		// array, so its length varies (and can be shorter than the old legacy 256-byte assumption,
+		// which threw IndexOutOfBoundsException on chunks with little/no remaining data).
+		byteBuf.skipBytes(byteBuf.readableBytes());
 
 		LevelChunk worldChunk = new LevelChunk(FunnelMC.mc.level, new ChunkPos(chunkX, chunkZ));
 

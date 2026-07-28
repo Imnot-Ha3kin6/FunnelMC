@@ -9,6 +9,7 @@ import org.cloudburstmc.protocol.bedrock.packet.NetworkSettingsPacket;
 import org.cloudburstmc.protocol.common.PacketSignal;
 
 import me.THEREALWWEFAN231.funnelmc.FunnelMC;
+import net.minecraft.client.Minecraft;
 
 public class ClientBatchHandler implements BedrockPacketHandler {
 
@@ -29,7 +30,11 @@ public class ClientBatchHandler implements BedrockPacketHandler {
 			return PacketSignal.HANDLED;
 		}
 
-		FunnelMC.instance.packetTranslatorManager.translatePacket(packet);
+		// Translators touch client-only state (mc.level, mc.player, screens, ...) that vanilla
+		// guards with RunningOnDifferentThreadException outside the render/main thread. This
+		// handler runs on the RakNet session's Netty I/O thread, not the main thread, so translation
+		// has to be handed off instead of run inline here.
+		Minecraft.getInstance().execute(() -> FunnelMC.instance.packetTranslatorManager.translatePacket(packet));
 
 		return PacketSignal.HANDLED;
 	}

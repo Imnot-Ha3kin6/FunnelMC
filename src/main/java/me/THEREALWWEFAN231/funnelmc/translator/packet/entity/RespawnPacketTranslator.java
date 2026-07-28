@@ -40,8 +40,7 @@ public class RespawnPacketTranslator extends PacketTranslator<RespawnPacket> {
 			Client.instance.sendPacket(playerActionPacket);
 
 			//TODO: correct these values, so like it's not just overworld, and survival
-			// TODO: dimensionType is a placeholder - see DimensionTranslator/StartGameTranslator TODOs
-			Holder<DimensionType> dimensionType = null;
+			Holder<DimensionType> dimensionType = DimensionTranslator.bedrockToJavaDimensionType(0);
 			ResourceKey<Level> dimensionId = Level.OVERWORLD;
 			CommonPlayerSpawnInfo commonPlayerSpawnInfo = new CommonPlayerSpawnInfo(dimensionType, dimensionId, -1, GameType.SURVIVAL, GameType.SURVIVAL, false, false, Optional.empty(), 0, 63);
 			ClientboundRespawnPacket clientboundRespawnPacket = new ClientboundRespawnPacket(commonPlayerSpawnInfo, ClientboundRespawnPacket.KEEP_ALL_DATA);
