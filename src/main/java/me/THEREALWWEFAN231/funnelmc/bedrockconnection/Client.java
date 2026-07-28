@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import org.cloudburstmc.protocol.bedrock.BedrockClientSession;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodec;
 import org.cloudburstmc.protocol.bedrock.codec.v1001.Bedrock_v1001;
+import org.cloudburstmc.protocol.bedrock.data.AuthoritativeMovementMode;
 import org.cloudburstmc.protocol.bedrock.data.auth.AuthType;
 import org.cloudburstmc.protocol.bedrock.data.auth.CertificateChainPayload;
 import org.cloudburstmc.protocol.bedrock.netty.initializer.BedrockClientInitializer;
@@ -51,6 +52,13 @@ public class Client {
 	public BedrockContainers containers;
 	public BlockEntityDataCache blockEntityDataCache;
 	public byte openContainerId;
+
+	// Set from StartGamePacket. Most current servers (including the vanilla Bedrock Dedicated Server
+	// by default) run SERVER or SERVER_WITH_REWIND, which reject the legacy client-authoritative
+	// MovePlayerPacket outright ("Client cannot send MovePlayerPacket in server-auth movement
+	// environment!") - movement has to go through PlayerAuthInputPacket instead. See
+	// PlayerAuthInputSender and the movementMode guard in PlayerMoveTranslator.
+	public AuthoritativeMovementMode movementMode = AuthoritativeMovementMode.CLIENT;
 
 	private List<String> onlineChainData;
 

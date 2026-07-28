@@ -8,6 +8,7 @@ import me.THEREALWWEFAN231.funnelmc.translator.blockstate.BlockStateTranslator;
 import me.THEREALWWEFAN231.funnelmc.translator.container.screenhandler.ScreenHandlerTranslatorManager;
 import me.THEREALWWEFAN231.funnelmc.translator.enchantment.EnchantmentTranslator;
 import me.THEREALWWEFAN231.funnelmc.translator.item.ItemTranslator;
+import me.THEREALWWEFAN231.funnelmc.javaconnection.packet.movement.PlayerAuthInputSender;
 import me.THEREALWWEFAN231.funnelmc.utils.FileManagement;
 import me.THEREALWWEFAN231.funnelmc.utils.FunnelLogSetup;
 import net.minecraft.client.Minecraft;
@@ -32,6 +33,7 @@ public class FunnelMC {
 		ItemTranslator.load();
 		EnchantmentTranslator.load();
 		ScreenHandlerTranslatorManager.load();
+		new PlayerAuthInputSender();
 	}
 
 }

@@ -1,6 +1,7 @@
 package me.THEREALWWEFAN231.funnelmc.javaconnection.packet.movement;
 
 import org.cloudburstmc.math.vector.Vector3f;
+import org.cloudburstmc.protocol.bedrock.data.AuthoritativeMovementMode;
 import org.cloudburstmc.protocol.bedrock.packet.MovePlayerPacket;
 
 import me.THEREALWWEFAN231.funnelmc.FunnelMC;
@@ -31,6 +32,13 @@ public class PlayerMoveTranslator extends PacketTranslator<ServerboundMovePlayer
 	}
 
 	public static void translateMovementPacket(ServerboundMovePlayerPacket serverboundMovePlayerPacket, MovePlayerPacket.Mode mode) {
+		// Servers running server-authoritative movement (most current ones, including the vanilla
+		// Bedrock Dedicated Server by default) reject MovePlayerPacket outright - PlayerAuthInputSender
+		// reports position/rotation instead, every tick, via PlayerAuthInputPacket.
+		if (Client.instance.movementMode != AuthoritativeMovementMode.CLIENT) {
+			return;
+		}
+
 		double currentPosX = serverboundMovePlayerPacket.getX(FunnelMC.mc.player.getX());
 		double currentPosY = serverboundMovePlayerPacket.getY(FunnelMC.mc.player.getY()) + FunnelMC.mc.player.getEyeHeight(Pose.STANDING);
 		double currentPosZ = serverboundMovePlayerPacket.getZ(FunnelMC.mc.player.getZ());

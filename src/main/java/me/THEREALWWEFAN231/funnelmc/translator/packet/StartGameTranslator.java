@@ -50,6 +50,8 @@ public class StartGameTranslator extends PacketTranslator<StartGamePacket> {
 				SimpleDefinitionRegistry.<ItemDefinition>builder().addAll(packet.getItemDefinitions()).build());
 		Client.instance.bedrockSession.getPeer().getCodecHelper().setBlockDefinitions(BlockPaletteTranslator.BLOCK_DEFINITIONS);
 
+		Client.instance.movementMode = packet.getAuthoritativeMovementMode();
+
 		int playerEntityId = (int) packet.getRuntimeEntityId();//not sure if we are suppose to use runtime id or unique id
 		lastRunTimeId = playerEntityId;
 
