@@ -8,7 +8,9 @@ import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.ECGenParameterSpec;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -29,7 +31,7 @@ public class Auth {
 	private UUID identity;
 	private String displayName;
 
-	public String getOnlineChainData() throws Exception {
+	public List<String> getOnlineChainData() throws Exception {
 		Gson gson = TunnelMC.instance.fileManagement.normalGson;
 
 		KeyPair ecdsa256KeyPair = Auth.createKeyPair();//for xbox live, xbox live requests use, ES256, ECDSA256
@@ -96,10 +98,14 @@ public class Auth {
 			this.displayName = extraData.get("displayName").getAsString();
 		}
 
-		return gson.toJson(chainDataObject);
+		List<String> chain = new ArrayList<>();
+		for (JsonElement jsonElement : chainDataObject.get("chain").getAsJsonArray()) {
+			chain.add(jsonElement.getAsString());
+		}
+		return chain;
 	}
 
-	public String getOfflineChainData(String username) throws Exception {
+	public List<String> getOfflineChainData(String username) throws Exception {
 		//So we need to assign the a uuid from a username, or else everytime we join a server with the same name, we will get reset(as if we are a new player)
 		//Java does it this way, I'm not sure if bedrock does but it gets our goal accomplished, PlayerEntity.getOfflinePlayerUuid
 		UUID offlineUUID = UUID.nameUUIDFromBytes(("OfflinePlayer:" + username).getBytes(StandardCharsets.UTF_8));
@@ -138,18 +144,13 @@ public class Auth {
 
 		String jwt = header + "." + payload + "." + signatureString;
 
-		//create a json object with our 1 chain array
-		JsonArray chainDataJsonArray = new JsonArray();
-		chainDataJsonArray.add(jwt);
-
-		JsonObject jsonObject = new JsonObject();
-		jsonObject.add("chain", chainDataJsonArray);
-
 		this.xuid = xuid;
 		this.identity = offlineUUID;
 		this.displayName = username;
 
-		return gson.toJson(jsonObject);
+		List<String> chainList = new ArrayList<>();
+		chainList.add(jwt);
+		return chainList;
 	}
 
 	public String signBytes(byte[] dataToSign) throws Exception {

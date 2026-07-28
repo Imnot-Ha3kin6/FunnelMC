@@ -2,10 +2,11 @@ package me.THEREALWWEFAN231.tunnelmc.translator.packet;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 import org.cloudburstmc.protocol.bedrock.data.GameRuleData;
-import com.nukkitx.protocol.bedrock.data.GameType;
+import org.cloudburstmc.protocol.bedrock.data.GameType;
 import org.cloudburstmc.protocol.bedrock.packet.RequestChunkRadiusPacket;
 import org.cloudburstmc.protocol.bedrock.packet.SetLocalPlayerAsInitializedPacket;
 import org.cloudburstmc.protocol.bedrock.packet.StartGamePacket;
@@ -16,16 +17,18 @@ import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
 import me.THEREALWWEFAN231.tunnelmc.translator.dimension.DimensionTranslator;
 import me.THEREALWWEFAN231.tunnelmc.translator.gamemode.GameModeTranslator;
-import net.minecraft.client.Minecraft;
+import net.minecraft.core.Holder;
 import net.minecraft.network.protocol.game.ClientboundSetChunkCacheCenterPacket;
 import net.minecraft.network.protocol.game.ClientboundLoginPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
-import net.minecraft.util.Mth;
-import net.minecraft.core.RegistryAccess;
+import net.minecraft.network.protocol.game.CommonPlayerSpawnInfo;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.level.GameType;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.PositionMoveRotation;
+import net.minecraft.world.entity.Relative;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.dimension.DimensionType;
+import net.minecraft.world.phys.Vec3;
 
 public class StartGameTranslator extends PacketTranslator<StartGamePacket> {
 
@@ -37,29 +40,26 @@ public class StartGameTranslator extends PacketTranslator<StartGamePacket> {
 		int playerEntityId = (int) packet.getRuntimeEntityId();//not sure if we are suppose to use runtime id or unique id
 		lastRunTimeId = playerEntityId;
 
-		for (StartGamePacket.ItemEntry itemEntry : packet.getItemEntries()) {
-			if (itemEntry.getIdentifier().equals("minecraft:shield")) {
-				Client.instance.bedrockClient.getSession().getHardcodedBlockingId().set(itemEntry.getId());
-				break;
-			}
-		}
-
 		DEFAULT_GAME_TYPE = packet.getLevelGameType();
-		GameMode gameMode = GameModeTranslator.bedrockToJava(packet.getPlayerGameType(), packet.getLevelGameType());
-		GameMode previousGameMode = GameMode.NOT_SET;
+		net.minecraft.world.level.GameType gameMode = GameModeTranslator.bedrockToJava(packet.getPlayerGameType(), packet.getLevelGameType());
+		net.minecraft.world.level.GameType previousGameMode = null;
 		long sha256Seed = packet.getSeed();
 		boolean hardcore = false;
-		Set<RegistryKey<World>> dimensionIds = new HashSet<>();//im not quite sure if it needs to be linked, it would appear not as ClientPlayNetworkHandler shuffles them
-		dimensionIds.add(World.NETHER);
-		dimensionIds.add(World.OVERWORLD);
-		dimensionIds.add(World.END);
-		DynamicRegistryManager.Impl registryManager = DynamicRegistryManager.create();
-		DimensionType dimensionType = DimensionTranslator.bedrockToJava(packet.getDimensionId());
-		RegistryKey<World> dimensionId = DimensionTranslator.bedrockToJavaRegistryKey(packet.getDimensionId());
+		Set<ResourceKey<Level>> dimensionIds = new HashSet<>();//im not quite sure if it needs to be linked, it would appear not as ClientPacketListener shuffles them
+		dimensionIds.add(Level.NETHER);
+		dimensionIds.add(Level.OVERWORLD);
+		dimensionIds.add(Level.END);
+		ResourceKey<Level> dimensionId = DimensionTranslator.bedrockToJavaRegistryKey(packet.getDimensionId());
+		// TODO: this needs a real Holder<DimensionType> sourced from bundled vanilla registry data
+		// (see DimensionTranslator) - modern DimensionType is fully registry/datapack driven and
+		// there's no live Java server here to pull it from.
+		Holder<DimensionType> dimensionType = null;
 		int maxPlayers = 999;
 		int chunkLoadDistance = 3;
+		int simulationDistance = chunkLoadDistance;
 		boolean reducedDebugInfo = false;
 		boolean showDeathScreen = true;
+		boolean doLimitedCrafting = false;
 		boolean debugWorld = false;
 		boolean flatWorld = false;
 
@@ -70,32 +70,33 @@ public class StartGameTranslator extends PacketTranslator<StartGamePacket> {
 			}
 		}
 
-		GameJoinS2CPacket gameJoinS2CPacket = new GameJoinS2CPacket(playerEntityId, gameMode, previousGameMode, sha256Seed, hardcore, dimensionIds, registryManager, dimensionType, dimensionId, maxPlayers, chunkLoadDistance, reducedDebugInfo, showDeathScreen, debugWorld, flatWorld);
-		Client.instance.javaConnection.processServerToClientPacket(gameJoinS2CPacket);
-		
+		CommonPlayerSpawnInfo commonPlayerSpawnInfo = new CommonPlayerSpawnInfo(dimensionType, dimensionId, sha256Seed, gameMode, previousGameMode, debugWorld, flatWorld, Optional.empty(), 0, 63);
+		ClientboundLoginPacket clientboundLoginPacket = new ClientboundLoginPacket(playerEntityId, hardcore, dimensionIds, maxPlayers, chunkLoadDistance, simulationDistance, reducedDebugInfo, showDeathScreen, doLimitedCrafting, commonPlayerSpawnInfo, false, false);
+		Client.instance.javaConnection.processServerToClientPacket(clientboundLoginPacket);
+
 		Client.instance.onPlayerInitialized();
 
-		//TODO send a complete SynchronizeTagsS2CPacket - that way water can work
+		//TODO send a complete tag sync packet - that way water can work
 
-		MinecraftClient.getInstance().execute(() -> GameRulesChangedTranslator.onGameRulesChanged(packet.getGamerules()));
+		net.minecraft.client.Minecraft.getInstance().execute(() -> GameRulesChangedTranslator.onGameRulesChanged(packet.getGamerules()));
 
 		float x = packet.getPlayerPosition().getX();
 		float y = packet.getPlayerPosition().getY();
 		float z = packet.getPlayerPosition().getZ();
 		float yaw = packet.getRotation().getX();
 		float pitch = packet.getRotation().getY();
-		int teleportId = 0;
-		PlayerPositionLookS2CPacket playerPositionLookS2CPacket = new PlayerPositionLookS2CPacket(x, y, z, yaw, pitch, Collections.emptySet(), teleportId);
-		Client.instance.javaConnection.processServerToClientPacket(playerPositionLookS2CPacket);
+		PositionMoveRotation positionMoveRotation = new PositionMoveRotation(new Vec3(x, y, z), Vec3.ZERO, yaw, pitch);
+		ClientboundPlayerPositionPacket clientboundPlayerPositionPacket = new ClientboundPlayerPositionPacket(0, positionMoveRotation, Collections.<Relative>emptySet());
+		Client.instance.javaConnection.processServerToClientPacket(clientboundPlayerPositionPacket);
 
-		int chunkX = MathHelper.floor(x) >> 4;
-		int chunkZ = MathHelper.floor(z) >> 4;
-		ChunkRenderDistanceCenterS2CPacket chunkRenderDistanceCenterS2CPacket = new ChunkRenderDistanceCenterS2CPacket(chunkX, chunkZ);
-		Client.instance.javaConnection.processServerToClientPacket(chunkRenderDistanceCenterS2CPacket);
+		int chunkX = Mth.floor(x) >> 4;
+		int chunkZ = Mth.floor(z) >> 4;
+		ClientboundSetChunkCacheCenterPacket clientboundSetChunkCacheCenterPacket = new ClientboundSetChunkCacheCenterPacket(chunkX, chunkZ);
+		Client.instance.javaConnection.processServerToClientPacket(clientboundSetChunkCacheCenterPacket);
 
 		// Boilerplate initialization stuff
 		RequestChunkRadiusPacket requestChunkRadiusPacket = new RequestChunkRadiusPacket();
-		requestChunkRadiusPacket.setRadius(TunnelMC.mc.options.viewDistance);
+		requestChunkRadiusPacket.setRadius(TunnelMC.mc.options.renderDistance().get());
 		Client.instance.sendPacketImmediately(requestChunkRadiusPacket);
 
 		Client.instance.sendPacketImmediately(new TickSyncPacket());

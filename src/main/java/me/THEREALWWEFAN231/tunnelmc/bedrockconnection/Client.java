@@ -1,20 +1,25 @@
 package me.THEREALWWEFAN231.tunnelmc.bedrockconnection;
 
 import java.net.InetSocketAddress;
-import java.util.function.BiConsumer;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.nukkitx.protocol.bedrock.BedrockClient;
+import org.cloudburstmc.protocol.bedrock.BedrockClientSession;
+import org.cloudburstmc.protocol.bedrock.codec.BedrockCodec;
+import org.cloudburstmc.protocol.bedrock.codec.v1001.Bedrock_v1001;
+import org.cloudburstmc.protocol.bedrock.data.auth.CertificateChainPayload;
+import org.cloudburstmc.protocol.bedrock.netty.initializer.BedrockClientInitializer;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
-import org.cloudburstmc.protocol.bedrock.netty.codec.packet.BedrockPacketCodec;
-import org.cloudburstmc.protocol.bedrock.BedrockSession;
 import org.cloudburstmc.protocol.bedrock.packet.LoginPacket;
-import org.cloudburstmc.protocol.bedrock.codec.v431.Bedrock_v431;
 
-import io.netty.util.AsciiString;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioDatagramChannel;
+import org.cloudburstmc.netty.channel.raknet.RakChannelFactory;
+
 import me.THEREALWWEFAN231.tunnelmc.TunnelMC;
 import me.THEREALWWEFAN231.tunnelmc.auth.Auth;
 import me.THEREALWWEFAN231.tunnelmc.auth.SkinData;
@@ -23,21 +28,20 @@ import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.caches.container.BedrockCo
 import me.THEREALWWEFAN231.tunnelmc.javaconnection.FakeJavaConnection;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.DisconnectedScreen;
-import net.minecraft.client.util.NetworkUtils;
 import net.minecraft.network.chat.Component;
 
 public class Client {
 
 	public static Client instance = new Client();
 	private final Logger logger = LogManager.getLogger(ClientBatchHandler.class);
-	public BedrockPacketCodec bedrockPacketCodec = Bedrock_v431.V431_CODEC;
+	public BedrockCodec bedrockCodec = Bedrock_v1001.CODEC;
 	private String ip;
 	private int port;
 	private boolean onlineMode;
 	public Auth authData;
-	public BedrockClient bedrockClient;
+	public BedrockClientSession bedrockSession;
 	public FakeJavaConnection javaConnection;
-	
+
 	public BedrockContainers containers;
 	public BlockEntityDataCache blockEntityDataCache;
 	public byte openContainerId;
@@ -50,42 +54,45 @@ public class Client {
 		org.apache.logging.log4j.core.Logger logger = (org.apache.logging.log4j.core.Logger) LogManager.getRootLogger();
 		logger.get().setLevel(Level.DEBUG);
 
-		InetSocketAddress bindAddress = new InetSocketAddress("0.0.0.0", this.getOpenLocalPort());
-		this.bedrockClient = new BedrockClient(bindAddress);
-		this.bedrockClient.bind().join();
-
 		InetSocketAddress addressToConnect = new InetSocketAddress(ip, port);
-		this.bedrockClient.connect(addressToConnect).whenComplete((BiConsumer<BedrockSession, Throwable>) (session, throwable) -> {
-			if (throwable != null) {
-				MinecraftClient.getInstance().execute(() -> MinecraftClient.getInstance().disconnect(new DisconnectedScreen(MinecraftClient.getInstance().currentScreen, Text.of("Use Translated Here"), Text.of(throwable.getMessage()))));
-				return;
+
+		ChannelFuture future = new Bootstrap()
+				.channelFactory(RakChannelFactory.client(NioDatagramChannel.class))
+				.group(new NioEventLoopGroup())
+				.handler(new BedrockClientInitializer() {
+					@Override
+					protected void initSession(BedrockClientSession session) {
+						session.setCodec(Client.this.bedrockCodec);
+						session.setPacketHandler(new ClientBatchHandler());
+						session.setLogging(false);
+
+						Client.this.onSessionInitialized(session);
+					}
+				})
+				.connect(addressToConnect);
+
+		future.addListener(result -> {
+			if (!result.isSuccess()) {
+				Minecraft.getInstance().execute(() -> Minecraft.getInstance().disconnect(new DisconnectedScreen(Minecraft.getInstance().screen, Component.literal("Use Translated Here"), Component.literal(result.cause().getMessage())), false));
 			}
-
-			Client.this.onSessionInitialized(session);
 		});
-
 	}
 
-	public void onSessionInitialized(BedrockSession bedrockSession) {
-		bedrockSession.setPacketCodec(this.bedrockPacketCodec);
-		bedrockSession.addDisconnectHandler(reason -> System.out.println("Disconnected"));
-		bedrockSession.setBatchHandler(new ClientBatchHandler());
-		bedrockSession.setLogging(false);
+	public void onSessionInitialized(BedrockClientSession bedrockSession) {
+		this.bedrockSession = bedrockSession;
 
 		try {
 			LoginPacket loginPacket = new LoginPacket();
 
 			this.authData = new Auth();
-			String chainData;
 			if (this.onlineMode) {
-				chainData = this.authData.getOnlineChainData();
+				loginPacket.setAuthPayload(new CertificateChainPayload(this.authData.getOnlineChainData()));
 			} else {
-				chainData = this.authData.getOfflineChainData(TunnelMC.mc.getSession().getUsername());
+				loginPacket.setAuthPayload(new CertificateChainPayload(this.authData.getOfflineChainData(Minecraft.getInstance().getUser().getName())));
 			}
 
-			loginPacket.setProtocolVersion(bedrockSession.getPacketCodec().getProtocolVersion());
-			loginPacket.setChainData(new AsciiString(chainData.getBytes()));
-			loginPacket.setSkinData(new AsciiString(SkinData.getSkinData(this.ip + ":" + this.port)));
+			loginPacket.setProtocolVersion(bedrockSession.getCodec().getProtocolVersion());
+			loginPacket.setClientJwt(SkinData.getSkinData(this.ip + ":" + this.port));
 			this.sendPacketImmediately(loginPacket);
 
 			this.javaConnection = new FakeJavaConnection();
@@ -95,7 +102,7 @@ public class Client {
 			e.printStackTrace();
 		}
 	}
-	
+
 	//when our java player is initialized
 	public void onPlayerInitialized() {
 		this.containers = new BedrockContainers();
@@ -104,34 +111,21 @@ public class Client {
 	}
 
 	public boolean isConnectionOpen() {
-		return this.bedrockClient != null && this.bedrockClient.getRakNet() != null && this.bedrockClient.getRakNet().isRunning();
+		return this.bedrockSession != null && this.bedrockSession.isConnected();
 	}
 
 	public void sendPacketImmediately(BedrockPacket packet) {
-		BedrockSession session = this.bedrockClient.getSession();
-
-		session.sendPacketImmediately(packet);
-		if (session.isLogging()) {
-			this.logger.info("Outbound {}: {}", session.getAddress().toString(), packet.getClass().getCanonicalName());
+		this.bedrockSession.sendPacketImmediately(packet);
+		if (this.bedrockSession.isLogging()) {
+			this.logger.info("Outbound {}: {}", this.bedrockSession.getSocketAddress(), packet.getClass().getCanonicalName());
 		}
 	}
 
 	public void sendPacket(BedrockPacket packet) {
-		BedrockSession session = this.bedrockClient.getSession();
-
-		session.sendPacket(packet);
-		if (session.isLogging()) {
-			this.logger.info("Outbound {}: {}", session.getAddress().toString(), packet.getClass().getCanonicalName());
+		this.bedrockSession.sendPacket(packet);
+		if (this.bedrockSession.isLogging()) {
+			this.logger.info("Outbound {}: {}", this.bedrockSession.getSocketAddress(), packet.getClass().getCanonicalName());
 		}
-	}
-
-	public int getOpenLocalPort() {
-		int port = NetworkUtils.findLocalPort();//minecraft does this when opening world to lan
-		if (port == 25564) {//fallback port, we are going to change it because we are cool
-			port = 2021;
-		}
-		return port;
-		//		return 12345;
 	}
 
 }

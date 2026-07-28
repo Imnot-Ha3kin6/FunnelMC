@@ -16,16 +16,16 @@ import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket;
-import net.minecraft.network.packet.s2c.query.QueryPongS2CPacket;
+import net.minecraft.network.protocol.common.ClientboundPingPacket;
 import net.minecraft.network.protocol.status.ClientboundStatusResponsePacket;
 
-@Mixin(ClientConnection.class)
+@Mixin(Connection.class)
 public class MixinClientConnection {
 
 	@Shadow
 	private Channel channel;
 
-	@Shadow private Text disconnectReason;
+	@Shadow private Component disconnectReason;
 
 	@Inject(method = "isOpen", at = @At("HEAD"), cancellable = true)
 	public void isOpen(CallbackInfoReturnable<Boolean> callbackInfoReturnable) {
@@ -53,7 +53,7 @@ public class MixinClientConnection {
 	public void channelRead0(ChannelHandlerContext channelHandlerContext, Packet<?> packet, CallbackInfo callback) {
 		if (this.channel.isOpen()) {
 
-			if (packet instanceof ParticleS2CPacket || packet instanceof QueryResponseS2CPacket || packet instanceof QueryPongS2CPacket) {
+			if (packet instanceof ClientboundLevelParticlesPacket || packet instanceof ClientboundStatusResponsePacket || packet instanceof ClientboundPingPacket) {
 				return;
 			}
 			
@@ -62,10 +62,10 @@ public class MixinClientConnection {
 	}
 
 	@Inject(method = "disconnect", at = @At("HEAD"), cancellable = true)
-	public void disconnect(Text disconnectReason, CallbackInfo ci) {
+	public void disconnect(Component disconnectReason, CallbackInfo ci) {
 		if (Client.instance.isConnectionOpen()) {
 			// this.channel is null here
-			Client.instance.bedrockClient.close(true);
+			Client.instance.bedrockSession.disconnect();
 			this.disconnectReason = disconnectReason;
 			ci.cancel();
 		}

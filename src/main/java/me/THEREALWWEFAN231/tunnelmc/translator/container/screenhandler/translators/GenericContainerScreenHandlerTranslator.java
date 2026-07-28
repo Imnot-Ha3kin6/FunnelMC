@@ -36,7 +36,7 @@ public class GenericContainerScreenHandlerTranslator extends ScreenHandlerTransl
 	}
 
 	@Override
-	public Class<? extends ScreenHandler> getScreenHandlerClass() {
+	public Class<? extends AbstractContainerMenu> getScreenHandlerClass() {
 		return GenericContainerScreenHandler.class;
 	}
 

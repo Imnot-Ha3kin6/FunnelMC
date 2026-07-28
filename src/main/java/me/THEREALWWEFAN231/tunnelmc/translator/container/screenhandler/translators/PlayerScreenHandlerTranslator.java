@@ -23,7 +23,7 @@ public class PlayerScreenHandlerTranslator extends ScreenHandlerTranslator<Playe
 	}
 
 	@Override
-	public int getJavaSlotFromBedrockContainer(ScreenHandler javaContainer, BedrockContainer bedrockContainer, int bedrockSlotId) {
+	public int getJavaSlotFromBedrockContainer(AbstractContainerMenu javaContainer, BedrockContainer bedrockContainer, int bedrockSlotId) {
 		if (bedrockContainer instanceof PlayerInventoryContainer) {
 
 			if (bedrockSlotId < 9) {//convert bedrock hotbar slots to java hotbar slots
@@ -54,7 +54,7 @@ public class PlayerScreenHandlerTranslator extends ScreenHandlerTranslator<Playe
 	}
 
 	@Override
-	public Class<? extends ScreenHandler> getScreenHandlerClass() {
+	public Class<? extends AbstractContainerMenu> getScreenHandlerClass() {
 		return PlayerScreenHandler.class;
 	}
 

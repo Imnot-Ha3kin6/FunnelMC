@@ -4,11 +4,8 @@ import org.cloudburstmc.protocol.bedrock.packet.TextPacket;
 
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
-import net.minecraft.network.MessageType;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSystemChatPacket;
-import net.minecraft.text.LiteralText;
-
-import java.util.UUID;
 
 public class TextTranslator extends PacketTranslator<TextPacket> {
 
@@ -19,18 +16,16 @@ public class TextTranslator extends PacketTranslator<TextPacket> {
 				System.out.println("Falling back to raw translation for " + packet.toString());
 			}
 			case RAW: {
-				GameMessageS2CPacket gameMessageS2CPacket = new GameMessageS2CPacket(new LiteralText(packet.getMessage()),
-						MessageType.CHAT, new UUID(0, 0));
+				ClientboundSystemChatPacket clientboundSystemChatPacket = new ClientboundSystemChatPacket(Component.literal(packet.getMessage()), false);
 
-				Client.instance.javaConnection.processServerToClientPacket(gameMessageS2CPacket);
+				Client.instance.javaConnection.processServerToClientPacket(clientboundSystemChatPacket);
 				break;
 			}
 			case CHAT: {
 				String formattedChatMessage = "<" + packet.getSourceName() + "> " + packet.getMessage();
-				GameMessageS2CPacket gameMessageS2CPacket = new GameMessageS2CPacket(new LiteralText(formattedChatMessage),
-						MessageType.CHAT, null);
+				ClientboundSystemChatPacket clientboundSystemChatPacket = new ClientboundSystemChatPacket(Component.literal(formattedChatMessage), false);
 
-				Client.instance.javaConnection.processServerToClientPacket(gameMessageS2CPacket);
+				Client.instance.javaConnection.processServerToClientPacket(clientboundSystemChatPacket);
 				break;
 			}
 		}

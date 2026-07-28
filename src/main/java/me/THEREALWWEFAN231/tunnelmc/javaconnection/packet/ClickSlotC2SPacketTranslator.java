@@ -16,20 +16,20 @@ import me.THEREALWWEFAN231.tunnelmc.utils.ItemDataUtils;
 import net.minecraft.network.protocol.game.ServerboundContainerClickPacket;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 
-public class ClickSlotC2SPacketTranslator extends PacketTranslator<ClickSlotC2SPacket> {
+public class ClickSlotC2SPacketTranslator extends PacketTranslator<ServerboundContainerClickPacket> {
 
 	@Override
-	public void translate(ClickSlotC2SPacket packet) {
+	public void translate(ServerboundContainerClickPacket packet) {
 
 	}
 
 	@Override
 	public Class<?> getPacketClass() {
-		return ClickSlotC2SPacket.class;
+		return ServerboundContainerClickPacket.class;
 	}
 
 	//MixinScreenHandler
-	public void onCursorStackClickEmptySlot(ScreenHandler screenHandler, int clickedSlotId, int itemCountToMoveFromCursorToClickedSlot) {
+	public void onCursorStackClickEmptySlot(AbstractContainerMenu screenHandler, int clickedSlotId, int itemCountToMoveFromCursorToClickedSlot) {
 
 		InventoryTransactionPacket inventoryTransactionPacket = new InventoryTransactionPacket();
 
@@ -77,7 +77,7 @@ public class ClickSlotC2SPacketTranslator extends PacketTranslator<ClickSlotC2SP
 
 	}
 
-	public void onEmptyCursorClickStack(ScreenHandler screenHandler, int clickedSlotId) {
+	public void onEmptyCursorClickStack(AbstractContainerMenu screenHandler, int clickedSlotId) {
 		InventoryTransactionPacket inventoryTransactionPacket = new InventoryTransactionPacket();
 
 		inventoryTransactionPacket.setTransactionType(InventoryTransactionType.NORMAL);
@@ -114,7 +114,7 @@ public class ClickSlotC2SPacketTranslator extends PacketTranslator<ClickSlotC2SP
 		Client.instance.sendPacket(inventoryTransactionPacket);
 	}
 
-	public void onHoverOverStackDropItem(ScreenHandler screenHandler, int clickedSlotId, int clickData) {
+	public void onHoverOverStackDropItem(AbstractContainerMenu screenHandler, int clickedSlotId, int clickData) {
 
 		InventoryTransactionPacket inventoryTransactionPacket = new InventoryTransactionPacket();
 
@@ -157,11 +157,11 @@ public class ClickSlotC2SPacketTranslator extends PacketTranslator<ClickSlotC2SP
 		Client.instance.sendPacket(inventoryTransactionPacket);
 	}
 
-	public void onStackShiftClicked(ScreenHandler screenHandler, int clickedSlotId) {
+	public void onStackShiftClicked(AbstractContainerMenu screenHandler, int clickedSlotId) {
 
 	}
 
-	public void onCursorStackAddToStack(ScreenHandler screenHandler, int clickedSlotId) {//for example the user has 64 oak planks in the cursor, and they right click a slot with oak planks(not an empty slot)
+	public void onCursorStackAddToStack(AbstractContainerMenu screenHandler, int clickedSlotId) {//for example the user has 64 oak planks in the cursor, and they right click a slot with oak planks(not an empty slot)
 		/*InventoryTransactionPacket inventoryTransactionPacket = new InventoryTransactionPacket();
 		
 		inventoryTransactionPacket.setTransactionType(InventoryTransactionType.NORMAL);

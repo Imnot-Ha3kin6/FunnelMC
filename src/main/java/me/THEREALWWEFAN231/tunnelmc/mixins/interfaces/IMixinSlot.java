@@ -4,10 +4,10 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
 //this can probably be removed when/if MixinScreenHandler doesn't use @Overwrite
-@Mixin(net.minecraft.screen.slot.Slot.class)
+@Mixin(net.minecraft.world.inventory.Slot.class)
 public interface IMixinSlot {
-	
-	@Invoker("onTake")
-	public void invokeOnTake(int amount);
+
+	@Invoker("onSwapCraft")
+	public void invokeOnSwapCraft(int amount);
 
 }

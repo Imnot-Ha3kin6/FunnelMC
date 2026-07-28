@@ -1,27 +1,25 @@
 package me.THEREALWWEFAN231.tunnelmc.translator.gamemode;
 
-import com.nukkitx.protocol.bedrock.data.GameType;
-
-import net.minecraft.world.level.GameType;
+import org.cloudburstmc.protocol.bedrock.data.GameType;
 
 public class GameModeTranslator {
 
-	public static GameMode bedrockToJava(GameType gameType, GameType worldDefaultGameType) {
+	public static net.minecraft.world.level.GameType bedrockToJava(GameType gameType, GameType worldDefaultGameType) {
 		switch (gameType) {
 			case SURVIVAL:
 			case SURVIVAL_VIEWER:
 			case DEFAULT:
-				return GameMode.SURVIVAL;
+				return net.minecraft.world.level.GameType.SURVIVAL;
 			case CREATIVE:
 			case CREATIVE_VIEWER:
-				return GameMode.CREATIVE;
+				return net.minecraft.world.level.GameType.CREATIVE;
 			case ADVENTURE:
-				return GameMode.ADVENTURE;
+				return net.minecraft.world.level.GameType.ADVENTURE;
 			case WORLD_DEFAULT:
 				return GameModeTranslator.bedrockToJava(worldDefaultGameType, worldDefaultGameType);
 		}
 
-		return GameMode.NOT_SET;
+		return null;
 	}
 
 }
