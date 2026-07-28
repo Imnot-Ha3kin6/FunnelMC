@@ -9,6 +9,7 @@ import me.THEREALWWEFAN231.funnelmc.translator.container.screenhandler.ScreenHan
 import me.THEREALWWEFAN231.funnelmc.translator.enchantment.EnchantmentTranslator;
 import me.THEREALWWEFAN231.funnelmc.translator.item.ItemTranslator;
 import me.THEREALWWEFAN231.funnelmc.utils.FileManagement;
+import me.THEREALWWEFAN231.funnelmc.utils.FunnelLogSetup;
 import net.minecraft.client.Minecraft;
 
 public class FunnelMC {
@@ -20,6 +21,8 @@ public class FunnelMC {
 	public PacketTranslatorManager packetTranslatorManager;
 
 	public void initialize() {
+		FunnelLogSetup.install();
+
 		this.fileManagement = new FileManagement();
 		this.packetTranslatorManager = new PacketTranslatorManager();
 
