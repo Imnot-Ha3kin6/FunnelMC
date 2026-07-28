@@ -4,6 +4,7 @@ import com.darkmagician6.eventapi.EventManager;
 import com.darkmagician6.eventapi.EventTarget;
 import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.math.vector.Vector3i;
+import org.cloudburstmc.protocol.bedrock.data.LevelEvent;
 import org.cloudburstmc.protocol.bedrock.packet.LevelEventPacket;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
@@ -72,7 +73,11 @@ public class LevelEventTranslator extends PacketTranslator<LevelEventPacket> {
             return;
         }
 
-        switch (packet.getType()) {
+        if (!(packet.getType() instanceof LevelEvent levelEvent)) {
+            return;
+        }
+
+        switch (levelEvent) {
             case BLOCK_START_BREAK: {
                 Vector3i position = packet.getPosition().toInt();
                 BlockBreakingWrapper blockBreakingWrapper = new BlockBreakingWrapper(packet.getData());

@@ -10,13 +10,13 @@ import net.minecraft.network.protocol.game.ClientboundPlayerAbilitiesPacket;
 public class AdventureSettingsTranslator extends PacketTranslator<AdventureSettingsPacket> {
     @Override
     public void translate(AdventureSettingsPacket packet) {
-        PlayerAbilities abilities = new PlayerAbilities();
-        abilities.allowFlying = packet.getSettings().contains(AdventureSetting.MAY_FLY);
-        abilities.allowModifyWorld = packet.getSettings().contains(AdventureSetting.BUILD);
+        Abilities abilities = new Abilities();
+        abilities.mayfly = packet.getSettings().contains(AdventureSetting.MAY_FLY);
+        abilities.mayBuild = packet.getSettings().contains(AdventureSetting.BUILD);
         abilities.flying = packet.getSettings().contains(AdventureSetting.FLYING);
         abilities.invulnerable = false;
 
-        PlayerAbilitiesS2CPacket abilitiesPacket = new PlayerAbilitiesS2CPacket(abilities);
+        ClientboundPlayerAbilitiesPacket abilitiesPacket = new ClientboundPlayerAbilitiesPacket(abilities);
         Client.instance.javaConnection.processServerToClientPacket(abilitiesPacket);
     }
 

@@ -1,123 +1,97 @@
 package me.THEREALWWEFAN231.tunnelmc.gui;
 
-import net.minecraft.client.gui.components.Checkbox;
 import org.lwjgl.glfw.GLFW;
 
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screen.ScreenTexts;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Checkbox;
 import net.minecraft.client.gui.components.EditBox;
-import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.text.LiteralText;
-import net.minecraft.text.TranslatableText;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.network.chat.CommonComponents;
+import net.minecraft.network.chat.Component;
 
 @Environment(EnvType.CLIENT)
 public class BedrockConnectionScreen extends Screen {
 
 	//	The UI that comes up after you click on Connect To Bedrock.
 
-	private ButtonWidget joinServerButton;
-	private TextFieldWidget addressField;
-	private TextFieldWidget portField;
-	private CheckboxWidget onlineModeWidget;
+	private Button joinServerButton;
+	private EditBox addressField;
+	private EditBox portField;
+	private Checkbox onlineModeWidget;
 	private final Screen parent;
 
 	public BedrockConnectionScreen(Screen parent) {
-		super(new LiteralText("Bedrock Connection"));
+		super(Component.literal("Bedrock Connection"));
 		this.parent = parent;
 	}
 
-	public void init() {
-		this.client.keyboard.setRepeatEvents(true);
-		this.joinServerButton = this.addButton(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 100 + 12, 204, 20, new TranslatableText("selectServer.select"), button -> {
-			if (BedrockConnectionScreen.this.addressField.getText().isEmpty()) {
-				return;
-			}
+	@Override
+	protected void init() {
+		this.joinServerButton = this.addRenderableWidget(Button.builder(Component.translatable("selectServer.select"), button -> {
+			this.tryJoin();
+		}).pos(this.width / 2 - 102, this.height / 4 + 100 + 12).size(204, 20).build());
 
-			int port;
-			try {
-				port = Integer.parseInt(BedrockConnectionScreen.this.portField.getText());
-			} catch (NumberFormatException e) {
-				port = 19132;
-			}
+		this.addRenderableWidget(Button.builder(CommonComponents.GUI_CANCEL, button -> this.minecraft.setScreenAndShow(this.parent))
+				.pos(this.width / 2 - 102, this.height / 4 + 125 + 12).size(204, 20).build());
 
-			Client.instance.initialize(BedrockConnectionScreen.this.addressField.getText(), port, BedrockConnectionScreen.this.onlineModeWidget.isChecked());
-		}));
+		this.addressField = this.addRenderableWidget(new EditBox(this.font, this.width / 2 - 100, (this.height / 4) + 16, 200, 20, Component.literal("Enter IP")));
+		this.portField = this.addRenderableWidget(new EditBox(this.font, this.width / 2 - 100, (this.height / 4) + 46, 200, 20, Component.literal("Enter Port")));
+		this.onlineModeWidget = this.addRenderableWidget(Checkbox.builder(Component.literal("Online mode"), this.font)
+				.pos(this.width / 2 - 100, (this.height / 4) + 80).selected(true).build());
 
-		this.addButton(new ButtonWidget(this.width / 2 - 102, this.height / 4 + 125 + 12, 204, 20, ScreenTexts.CANCEL, button -> BedrockConnectionScreen.this.client.openScreen(BedrockConnectionScreen.this.parent)));
-		this.addressField = new TextFieldWidget(this.textRenderer, this.width / 2 - 100, (this.height / 4) + 16, 200, 20, new LiteralText("Enter IP"));
-		this.portField = new TextFieldWidget(this.textRenderer, this.width / 2 - 100, (this.height / 4) + 46, 200, 20, new LiteralText("Enter Port"));
-		this.onlineModeWidget = new CheckboxWidget(this.width / 2 - 100, (this.height / 4) + 80, 200, 20, new LiteralText("Online mode"), true);
 		this.addressField.setMaxLength(128);
 		this.portField.setMaxLength(6);
-		this.addressField.setTextFieldFocused(true);
-		this.portField.setTextFieldFocused(false);
-		this.addressField.setText("127.0.0.1");
-		this.portField.setText("19132");
-		this.addressField.setChangedListener(text -> BedrockConnectionScreen.this.onAddressFieldChanged());
-		this.children.add(this.addressField);
-		this.children.add(this.portField);
+		this.addressField.setFocused(true);
+		this.portField.setFocused(false);
+		this.addressField.setValue("127.0.0.1");
+		this.portField.setValue("19132");
+		this.addressField.setResponder(text -> this.onAddressFieldChanged());
 		this.setInitialFocus(this.addressField);
 		this.onAddressFieldChanged();
 	}
 
-	public void tick() {
-		this.addressField.tick();
-		this.portField.tick();
+	private void tryJoin() {
+		if (this.addressField.getValue().isEmpty()) {
+			return;
+		}
+
+		int port;
+		try {
+			port = Integer.parseInt(this.portField.getValue());
+		} catch (NumberFormatException e) {
+			port = 19132;
+		}
+
+		Client.instance.initialize(this.addressField.getValue(), port, this.onlineModeWidget.selected());
 	}
 
-	public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-		this.renderBackground(matrices);
-		Screen.drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, 20, 16777215);
-		Screen.drawTextWithShadow(matrices, this.textRenderer, new LiteralText("Enter IP and Port"), this.width / 2 - 100, this.height / 4, 10526880);
-		this.addressField.render(matrices, mouseX, mouseY, delta);
-		this.portField.render(matrices, mouseX, mouseY, delta);
-		this.onlineModeWidget.render(matrices, mouseX, mouseY, delta);
-		super.render(matrices, mouseX, mouseY, delta);
-	}
-
-	public boolean mouseClicked(double mouseX, double mouseY, int button) {
-
-		this.addressField.mouseClicked(mouseX, mouseY, button);
-		this.portField.mouseClicked(mouseX, mouseY, button);
-		this.onlineModeWidget.mouseClicked(mouseX, mouseY, button);
-
-		return super.mouseClicked(mouseX, mouseY, button);
-	}
-
-	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-		if ((this.addressField.isFocused() || this.portField.isFocused()) && (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER)) {
-			this.joinServerButton.onPress();
-			this.joinServerButton.playDownSound(this.client.getSoundManager());
+	@Override
+	public boolean keyPressed(KeyEvent event) {
+		if ((this.addressField.isFocused() || this.portField.isFocused()) && (event.key() == GLFW.GLFW_KEY_ENTER || event.key() == GLFW.GLFW_KEY_KP_ENTER)) {
+			this.tryJoin();
+			this.joinServerButton.playDownSound(this.minecraft.getSoundManager());
 			return true;
 		}
 
-		return super.keyPressed(keyCode, scanCode, modifiers);
+		return super.keyPressed(event);
 	}
 
-	public void resize(MinecraftClient client, int width, int height) {
-		String addressText = this.addressField.getText();
-		String portText = this.portField.getText();
-		this.init(client, width, height);
-		this.addressField.setText(addressText);
-		this.portField.setText(portText);
-	}
-
+	@Override
 	public void onClose() {
-		this.client.openScreen(this.parent);
+		this.minecraft.setScreenAndShow(this.parent);
 	}
 
+	@Override
 	public void removed() {
-		this.client.keyboard.setRepeatEvents(false);
-		this.client.options.write();
+		this.minecraft.options.save();
 	}
 
 	private void onAddressFieldChanged() {
-		String addressText = this.addressField.getText();
+		String addressText = this.addressField.getValue();
 		this.joinServerButton.active = !addressText.isEmpty() && addressText.split(":").length > 0 && addressText.indexOf(32) == -1;
 	}
 

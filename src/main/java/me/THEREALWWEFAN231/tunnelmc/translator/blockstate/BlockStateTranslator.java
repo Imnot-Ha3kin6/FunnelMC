@@ -22,7 +22,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.resources.Identifier;
-import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 public class BlockStateTranslator {
 
@@ -110,14 +110,14 @@ public class BlockStateTranslator {
 			javaBlockIdentifier = blockStateInformation;
 		}
 
-		Block block = Registry.BLOCK.get(new Identifier(javaBlockIdentifier));
+		Block block = BuiltInRegistries.BLOCK.getValue(Identifier.parse(javaBlockIdentifier));
 		//do not use block instanceof AirBlock, as there is void_air and cave_air, i guess, never knew they existed
-		if (block == Blocks.AIR && !javaBlockIdentifier.equals("minecraft:air")) {//Registry.BLOCK.get returns air if its not found, so if this is true, the block is not found, and this generally isn't good
+		if (block == Blocks.AIR && !javaBlockIdentifier.equals("minecraft:air")) {//BuiltInRegistries.BLOCK.getValue returns air if its not found, so if this is true, the block is not found, and this generally isn't good
 			System.out.println(javaBlockIdentifier + " block was not found, this generally isn't good.");
 			return null;
 		}
 
-		BlockState theBlockState = block.getDefaultState();
+		BlockState theBlockState = block.defaultBlockState();
 
 		if (firstLeftBracketIndex != -1) {
 			String blockProperties = blockStateInformation.substring(firstLeftBracketIndex + 1, blockStateInformation.length() - 1);
@@ -129,7 +129,7 @@ public class BlockStateTranslator {
 				String key = keyAndValueArray[0];
 				String value = keyAndValueArray[1];
 
-				Property<?> property = block.getStateManager().getProperty(key);
+				Property<?> property = block.getStateDefinition().getProperty(key);
 
 				theBlockState = parsePropertyValue(theBlockState, property, value);
 				if (theBlockState == null) {
@@ -145,9 +145,9 @@ public class BlockStateTranslator {
 	}
 
 	private static <T extends Comparable<T>> BlockState parsePropertyValue(BlockState before, Property<T> property, String value) {//from the value command, jesus christ, i could barely get this to work, all this generic stuff :flushed:
-		Optional<T> optional = property.parse(value);
+		Optional<T> optional = property.getValue(value);
 		if (optional.isPresent()) {
-			return before.with(property, optional.get());
+			return before.setValue(property, optional.get());
 		}
 		return null;
 	}

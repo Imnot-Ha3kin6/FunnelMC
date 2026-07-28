@@ -10,17 +10,17 @@ import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
 public class AnimateTranslator extends PacketTranslator<AnimatePacket> {
     @Override
     public void translate(AnimatePacket packet) {
-        if (TunnelMC.mc.world == null) {
+        if (TunnelMC.mc.level == null) {
             return;
         }
-        Entity entity = TunnelMC.mc.world.getEntityById((int) packet.getRuntimeEntityId());
+        Entity entity = TunnelMC.mc.level.getEntity((int) packet.getRuntimeEntityId());
         if (entity == null) {
             return;
         }
 
         switch (packet.getAction()) {
             case SWING_ARM:
-                EntityAnimationS2CPacket swingArmPacket = new EntityAnimationS2CPacket(entity, 0);
+                ClientboundAnimatePacket swingArmPacket = new ClientboundAnimatePacket(entity, 0);
                 Client.instance.javaConnection.processServerToClientPacket(swingArmPacket);
                 break;
         }

@@ -7,10 +7,10 @@ import me.THEREALWWEFAN231.tunnelmc.translator.container.screenhandler.ScreenHan
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 
-public class PlayerScreenHandlerTranslator extends ScreenHandlerTranslator<PlayerScreenHandler> {
+public class PlayerScreenHandlerTranslator extends ScreenHandlerTranslator<InventoryMenu> {
 
 	@Override
-	public BedrockContainer getBedrockContainerFromJava(PlayerScreenHandler javaContainer, int javaSlotId) {
+	public BedrockContainer getBedrockContainerFromJava(InventoryMenu javaContainer, int javaSlotId) {
 		if (javaSlotId >= 9 && javaSlotId <= 44) {//java main inventory slot ids
 			return Client.instance.containers.getPlayerInventory();
 		} else if (javaSlotId >= 5 && javaSlotId <= 8) {//java armor slot ids
@@ -36,7 +36,7 @@ public class PlayerScreenHandlerTranslator extends ScreenHandlerTranslator<Playe
 	}
 
 	@Override
-	public int getBedrockSlotFromJavaContainer(PlayerScreenHandler javaContainer, int javaSlotId, BedrockContainer bedrockContainer) {
+	public int getBedrockSlotFromJavaContainer(InventoryMenu javaContainer, int javaSlotId, BedrockContainer bedrockContainer) {
 
 		if (javaSlotId >= 5 && javaSlotId <= 8) {//armor slots
 			return javaSlotId - 5;//convert to bedrock container slots, 0-3
@@ -55,7 +55,7 @@ public class PlayerScreenHandlerTranslator extends ScreenHandlerTranslator<Playe
 
 	@Override
 	public Class<? extends AbstractContainerMenu> getScreenHandlerClass() {
-		return PlayerScreenHandler.class;
+		return InventoryMenu.class;
 	}
 
 }

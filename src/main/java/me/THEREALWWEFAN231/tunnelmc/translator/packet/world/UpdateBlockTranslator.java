@@ -19,29 +19,29 @@ public class UpdateBlockTranslator extends PacketTranslator<UpdateBlockPacket> {
 	public void translate(UpdateBlockPacket packet) {
 		BlockPos blockPos = new BlockPos(packet.getBlockPosition().getX(), packet.getBlockPosition().getY(), packet.getBlockPosition().getZ());
 		if (packet.getDataLayer() == 0) {
-			BlockState blockState = BlockPaletteTranslator.RUNTIME_ID_TO_BLOCK_STATE.get(packet.getRuntimeId());
+			BlockState blockState = BlockPaletteTranslator.RUNTIME_ID_TO_BLOCK_STATE.get(packet.getDefinition().getRuntimeId());
 
-			BlockUpdateS2CPacket blockUpdateS2CPacket = new BlockUpdateS2CPacket(blockPos, blockState);
+			ClientboundBlockUpdatePacket blockUpdateS2CPacket = new ClientboundBlockUpdatePacket(blockPos, blockState);
 			Client.instance.javaConnection.processServerToClientPacket(blockUpdateS2CPacket);
 
 		} else if (packet.getDataLayer() == 1) {
 			// Set waterlogged state of existing block
-			BlockState blockState = MinecraftClient.getInstance().world.getBlockState(blockPos);
+			BlockState blockState = Minecraft.getInstance().level.getBlockState(blockPos);
 			BlockState newBlockState;
 			if (blockState.isAir()) {
-				newBlockState = BlockPaletteTranslator.RUNTIME_ID_TO_BLOCK_STATE.get(packet.getRuntimeId());
+				newBlockState = BlockPaletteTranslator.RUNTIME_ID_TO_BLOCK_STATE.get(packet.getDefinition().getRuntimeId());
 				if (blockState.isAir()) {
 					return;
 				}
 			} else {
-				if (blockState.contains(Properties.WATERLOGGED)) {
-					newBlockState = blockState.with(Properties.WATERLOGGED, packet.getRuntimeId() == BlockPaletteTranslator.WATER_BEDROCK_BLOCK_ID);
+				if (blockState.hasProperty(BlockStateProperties.WATERLOGGED)) {
+					newBlockState = blockState.setValue(BlockStateProperties.WATERLOGGED, packet.getDefinition().getRuntimeId() == BlockPaletteTranslator.WATER_BEDROCK_BLOCK_ID);
 				} else {
 					return;
 				}
 			}
 
-			BlockUpdateS2CPacket blockUpdateS2CPacket = new BlockUpdateS2CPacket(blockPos, newBlockState);
+			ClientboundBlockUpdatePacket blockUpdateS2CPacket = new ClientboundBlockUpdatePacket(blockPos, newBlockState);
 			Client.instance.javaConnection.processServerToClientPacket(blockUpdateS2CPacket);
 		}
 

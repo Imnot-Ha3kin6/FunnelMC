@@ -34,10 +34,10 @@ public class InventoryContentPacketTranslator extends PacketTranslator<Inventory
 				ItemData bedrockItemStack = packet.getContents().get(i);
 				ItemStack translatedStack = ItemTranslator.itemDataToItemStack(bedrockItemStack);
 
-				int javaSlotId = ScreenHandlerTranslatorManager.getJavaSlotFromBedrockContainer(TunnelMC.mc.player.currentScreenHandler, containerAffected, i);
+				int javaSlotId = ScreenHandlerTranslatorManager.getJavaSlotFromBedrockContainer(TunnelMC.mc.player.containerMenu, containerAffected, i);
 
 				containerAffected.setItemBedrock(i, bedrockItemStack);
-				TunnelMC.mc.player.playerScreenHandler.getSlot(javaSlotId).setStack(translatedStack);
+				TunnelMC.mc.player.inventoryMenu.getSlot(javaSlotId).set(translatedStack);
 			}
 
 			break;
@@ -48,7 +48,7 @@ public class InventoryContentPacketTranslator extends PacketTranslator<Inventory
 				ItemStack translatedStack = ItemTranslator.itemDataToItemStack(bedrockItemStack);
 
 				containerAffected.setItemBedrock(i, bedrockItemStack);
-				TunnelMC.mc.player.playerScreenHandler.getSlot(5 + i).setStack(translatedStack);
+				TunnelMC.mc.player.inventoryMenu.getSlot(5 + i).set(translatedStack);
 			}
 			break;
 
@@ -57,12 +57,12 @@ public class InventoryContentPacketTranslator extends PacketTranslator<Inventory
 			ItemStack translatedStack = ItemTranslator.itemDataToItemStack(bedrockItemStack);
 
 			containerAffected.setItemBedrock(0, bedrockItemStack);
-			TunnelMC.mc.player.playerScreenHandler.getSlot(45).setStack(translatedStack);
+			TunnelMC.mc.player.inventoryMenu.getSlot(45).set(translatedStack);
 			break;
 		}
 		default://basically TODO: currently works when opening a single chest but yeah..
 
-			DefaultedList<ItemStack> javaContents = DefaultedList.ofSize(packet.getContents().size(), ItemStack.EMPTY);
+			NonNullList<ItemStack> javaContents = NonNullList.withSize(packet.getContents().size(), ItemStack.EMPTY);
 
 			for (int i = 0; i < javaContainerSize; i++) {
 				ItemData bedrockItemStack = packet.getContents().get(i);
@@ -72,7 +72,7 @@ public class InventoryContentPacketTranslator extends PacketTranslator<Inventory
 				containerAffected.setItemBedrock(i, packet.getContents().get(i));
 			}
 
-			InventoryS2CPacket inventoryS2CPacket = new InventoryS2CPacket(syncId, javaContents);
+			ClientboundContainerSetContentPacket inventoryS2CPacket = new ClientboundContainerSetContentPacket(syncId, 0, javaContents, ItemStack.EMPTY);
 			Client.instance.javaConnection.processServerToClientPacket(inventoryS2CPacket);
 
 			break;

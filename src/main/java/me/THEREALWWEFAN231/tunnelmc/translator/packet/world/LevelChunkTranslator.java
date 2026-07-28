@@ -6,7 +6,7 @@ import org.cloudburstmc.nbt.NBTInputStream;
 import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.nbt.NbtMapBuilder;
 import org.cloudburstmc.nbt.util.stream.NetworkDataInputStream;
-import com.nukkitx.network.VarInts;
+import org.cloudburstmc.protocol.common.util.VarInts;
 import org.cloudburstmc.protocol.bedrock.packet.LevelChunkPacket;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
@@ -21,22 +21,18 @@ import me.THEREALWWEFAN231.tunnelmc.translator.blockstate.BlockPaletteTranslator
 import me.THEREALWWEFAN231.tunnelmc.translator.blockstate.LegacyBlockPaletteManager;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
-import net.minecraft.core.IdMap;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.util.Mth;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.Registry;
-import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.biome.source.BiomeArray;
 import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.lighting.LevelLightEngine;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 
 public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
-	private static final IndexedIterable<Biome> BIOME_REGISTRY = DynamicRegistryManager.create().get(Registry.BIOME_KEY);
 
 	private final List<LevelChunkPacket> chunksOutOfRenderDistance = new ArrayList<>();
 
@@ -91,13 +87,13 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 			}
 		}
 
-		ChunkSection[] chunkSections = new ChunkSection[16];
+		LevelChunkSection[] chunkSections = new LevelChunkSection[16];
 
 		ByteBuf byteBuf = Unpooled.buffer();
 		byteBuf.writeBytes(packet.getData());
 
 		for (int sectionIndex = 0; sectionIndex < packet.getSubChunksLength(); sectionIndex++) {
-			chunkSections[sectionIndex] = new ChunkSection(sectionIndex);
+			chunkSections[sectionIndex] = new LevelChunkSection(TunnelMC.mc.level.palettedContainerFactory());
 			int chunkVersion = byteBuf.readByte();
 			if (chunkVersion != 1 && chunkVersion != 8) {
 				manage0VersionChunk(byteBuf, chunkSections[sectionIndex]);
@@ -161,40 +157,33 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 			}
 		}
 
+		// TODO: biomes are no longer a flat per-chunk array in modern Minecraft (each LevelChunkSection
+		// carries its own PalettedContainerRO<Holder<Biome>>); for now we just consume the bytes off the
+		// wire and leave every section on its default biome, same as the pre-existing "TODO: biomes" gap.
 		byte[] bedrockBiomes = new byte[256];
 		byteBuf.readBytes(bedrockBiomes);
 
-		int[] javaBiomes = new int[1024];
-		int javaBiomeCount = 0;
-		for (byte bedrockBiome : bedrockBiomes) {
-			byte desiredBiome = bedrockBiome;
-			if (BIOME_REGISTRY.get(desiredBiome) == null) {
-				// Invalid biome that spams the console
-				// I got -98 so it could also be an encoding issue
-				desiredBiome = 1;
+		LevelChunk worldChunk = new LevelChunk(TunnelMC.mc.level, new ChunkPos(chunkX, chunkZ));
+
+		// TODO: modern worlds have a variable, negative-capable height range (e.g. -64..320, 24 sections)
+		// while this loop still assumes the legacy 0..255 / 16-section Bedrock layout, so translated
+		// chunks will render at the wrong Y offset until this is remapped against the real height range.
+		LevelChunkSection[] sections = worldChunk.getSections();
+		for (int i = 0; i < sections.length && i < chunkSections.length; i++) {
+			if (chunkSections[i] != null) {
+				sections[i] = chunkSections[i];
 			}
-			javaBiomes[javaBiomeCount++] = desiredBiome;
-			// convert 256 to 1024
-			javaBiomes[javaBiomeCount++] = desiredBiome;
-			javaBiomes[javaBiomeCount++] = desiredBiome;
-			javaBiomes[javaBiomeCount++] = desiredBiome;
 		}
 
-		BiomeArray biomeArray = new BiomeArray(BIOME_REGISTRY, javaBiomes);
-		WorldChunk worldChunk = new WorldChunk(null, new ChunkPos(chunkX, chunkZ), biomeArray);
-
-		for (int i = 0; i < worldChunk.getSectionArray().length; i++) {
-			worldChunk.getSectionArray()[i] = chunkSections[i];
-		}
-
-		ChunkDataS2CPacket chunkDeltaUpdateS2CPacket = new ChunkDataS2CPacket(worldChunk, 65535);
+		ClientboundLevelChunkWithLightPacket chunkDeltaUpdateS2CPacket = new ClientboundLevelChunkWithLightPacket(
+				worldChunk, TunnelMC.mc.level.getLightEngine(), new BitSet(), new BitSet());
 		Client.instance.javaConnection.processServerToClientPacket(chunkDeltaUpdateS2CPacket);
 	}
 
 	/**
 	 * Used for PocketMine.
 	 */
-	private void manage0VersionChunk(ByteBuf byteBuf, ChunkSection chunkSection) {
+	private void manage0VersionChunk(ByteBuf byteBuf, LevelChunkSection chunkSection) {
 		byte[] blockIds = new byte[4096];
 		byteBuf.readBytes(blockIds);
 
@@ -224,9 +213,10 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 	}
 
 	public boolean isChunkInRenderDistance(int chunkX, int chunkZ) {
-		int playerChunkX = MathHelper.floor(TunnelMC.mc.player.getX()) >> 4;
-		int playerChunkZ = MathHelper.floor(TunnelMC.mc.player.getZ()) >> 4;
-		return Math.abs(chunkX - playerChunkX) <= TunnelMC.mc.options.viewDistance && Math.abs(chunkZ - playerChunkZ) <= TunnelMC.mc.options.viewDistance;
+		int playerChunkX = Mth.floor(TunnelMC.mc.player.getX()) >> 4;
+		int playerChunkZ = Mth.floor(TunnelMC.mc.player.getZ()) >> 4;
+		int viewDistance = TunnelMC.mc.options.getEffectiveRenderDistance();
+		return Math.abs(chunkX - playerChunkX) <= viewDistance && Math.abs(chunkZ - playerChunkZ) <= viewDistance;
 	}
 
 	@EventTarget

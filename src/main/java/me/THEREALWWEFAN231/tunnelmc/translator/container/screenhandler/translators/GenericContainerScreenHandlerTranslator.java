@@ -6,11 +6,11 @@ import me.THEREALWWEFAN231.tunnelmc.translator.container.screenhandler.ScreenHan
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 
-public class GenericContainerScreenHandlerTranslator extends ScreenHandlerTranslator<GenericContainerScreenHandler> {
+public class GenericContainerScreenHandlerTranslator extends ScreenHandlerTranslator<ChestMenu> {
 
 	@Override
-	public BedrockContainer getBedrockContainerFromJava(GenericContainerScreenHandler javaContainer, int javaSlotId) {
-		int slotsInContainer = javaContainer.getRows() * 9;
+	public BedrockContainer getBedrockContainerFromJava(ChestMenu javaContainer, int javaSlotId) {
+		int slotsInContainer = javaContainer.getRowCount() * 9;
 
 		if (javaSlotId < slotsInContainer) {
 			return Client.instance.containers.getCurrentlyOpenContainer();
@@ -20,8 +20,8 @@ public class GenericContainerScreenHandlerTranslator extends ScreenHandlerTransl
 	}
 
 	@Override
-	public int getBedrockSlotFromJavaContainer(GenericContainerScreenHandler javaContainer, int javaSlotId, BedrockContainer bedrockContainer) {
-		int slotsInContainer = javaContainer.getRows() * 9;
+	public int getBedrockSlotFromJavaContainer(ChestMenu javaContainer, int javaSlotId, BedrockContainer bedrockContainer) {
+		int slotsInContainer = javaContainer.getRowCount() * 9;
 		if (javaSlotId < slotsInContainer) {//the ids are the same in java and bedrock for chest containers
 			return javaSlotId;
 		}
@@ -37,7 +37,7 @@ public class GenericContainerScreenHandlerTranslator extends ScreenHandlerTransl
 
 	@Override
 	public Class<? extends AbstractContainerMenu> getScreenHandlerClass() {
-		return GenericContainerScreenHandler.class;
+		return ChestMenu.class;
 	}
 
 }

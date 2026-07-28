@@ -12,14 +12,14 @@ public class SetEntityMotionTranslator extends PacketTranslator<SetEntityMotionP
 
 	@Override
 	public void translate(SetEntityMotionPacket packet) {
-		if (TunnelMC.mc.world == null) {
+		if (TunnelMC.mc.level == null) {
 			// Stack trace thrown otherwise
 			return;
 		}
 		int id = (int) packet.getRuntimeEntityId();
-		Vec3d velocity = new Vec3d(packet.getMotion().getX(), packet.getMotion().getY(), packet.getMotion().getZ());
-		
-		EntityVelocityUpdateS2CPacket entityVelocityUpdateS2CPacket = new EntityVelocityUpdateS2CPacket(id, velocity);
+		Vec3 velocity = new Vec3(packet.getMotion().getX(), packet.getMotion().getY(), packet.getMotion().getZ());
+
+		ClientboundSetEntityMotionPacket entityVelocityUpdateS2CPacket = new ClientboundSetEntityMotionPacket(id, velocity);
 		Client.instance.javaConnection.processServerToClientPacket(entityVelocityUpdateS2CPacket);
 	}
 

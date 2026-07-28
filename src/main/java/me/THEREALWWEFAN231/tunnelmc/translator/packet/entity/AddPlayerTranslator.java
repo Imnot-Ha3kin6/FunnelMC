@@ -3,7 +3,6 @@ package me.THEREALWWEFAN231.tunnelmc.translator.packet.entity;
 import java.util.Collections;
 import java.util.UUID;
 
-import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Pair;
 import org.cloudburstmc.protocol.bedrock.packet.AddPlayerPacket;
 
@@ -12,11 +11,13 @@ import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
 import me.THEREALWWEFAN231.tunnelmc.translator.item.ItemTranslator;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.RemotePlayer;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
-import net.minecraft.network.packet.s2c.play.PlayerSpawnS2CPacket;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 
 public class AddPlayerTranslator extends PacketTranslator<AddPlayerPacket> {
@@ -25,34 +26,30 @@ public class AddPlayerTranslator extends PacketTranslator<AddPlayerPacket> {
 	public void translate(AddPlayerPacket packet) {
 		int id = (int) packet.getRuntimeEntityId();
 		UUID uuid = packet.getUuid();
-		String name = packet.getUsername();
 		double x = packet.getPosition().getX();
 		double y = packet.getPosition().getY();
 		double z = packet.getPosition().getZ();
 		float pitch = packet.getRotation().getX();//TODO: not sure about these
 		float yaw = packet.getRotation().getY();
-		Vec3d velocity = new Vec3d(packet.getMotion().getX(), packet.getMotion().getY(), packet.getMotion().getZ());
+		Vec3 velocity = new Vec3(packet.getMotion().getX(), packet.getMotion().getY(), packet.getMotion().getZ());
+
+		// The client itself spawns a RemotePlayer for this entity as long as a matching
+		// ClientboundPlayerInfoUpdatePacket (see PlayerListPacketTranslator) with this UUID has
+		// already been sent, exactly like the vanilla protocol expects.
+		EntityType<?> playerEntityType = BuiltInRegistries.ENTITY_TYPE.getValue(Identifier.withDefaultNamespace("player"));
 
 		Runnable runnable = () -> {
-			OtherClientPlayerEntity player = new OtherClientPlayerEntity(TunnelMC.mc.world, new GameProfile(uuid, name));
-			player.setEntityId(id);
-			player.setPos(x, y, z);
-			player.yaw = yaw;
-			player.pitch = pitch;
-			player.setVelocity(velocity);
-
-			PlayerSpawnS2CPacket playerSpawnS2CPacket = new PlayerSpawnS2CPacket(player);
-			Client.instance.javaConnection.processServerToClientPacket(playerSpawnS2CPacket);
+			ClientboundAddEntityPacket addEntityPacket = new ClientboundAddEntityPacket(id, uuid, x, y, z, pitch, yaw, playerEntityType, 0, velocity, yaw);
+			Client.instance.javaConnection.processServerToClientPacket(addEntityPacket);
 
 			Pair<EquipmentSlot, ItemStack> itemStackPair = new Pair<>(EquipmentSlot.MAINHAND, ItemTranslator.itemDataToItemStack(packet.getHand()));
-			EntityEquipmentUpdateS2CPacket equipmentUpdatePacket = new EntityEquipmentUpdateS2CPacket((int) packet.getRuntimeEntityId(),
-					Collections.singletonList(itemStackPair));
+			ClientboundSetEquipmentPacket equipmentUpdatePacket = new ClientboundSetEquipmentPacket(id, Collections.singletonList(itemStackPair));
 			Client.instance.javaConnection.processServerToClientPacket(equipmentUpdatePacket);
 		};
-		if (TunnelMC.mc.world != null) {
+		if (TunnelMC.mc.level != null) {
 			runnable.run();
 		} else {
-			MinecraftClient.getInstance().execute(runnable);
+			Minecraft.getInstance().execute(runnable);
 		}
 	}
 

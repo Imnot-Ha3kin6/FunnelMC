@@ -1,7 +1,10 @@
 package me.THEREALWWEFAN231.tunnelmc.translator.packet.entity;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.UUID;
 
 import com.mojang.authlib.GameProfile;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerListPacket;
@@ -9,9 +12,9 @@ import org.cloudburstmc.protocol.bedrock.packet.PlayerListPacket;
 import me.THEREALWWEFAN231.tunnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.tunnelmc.mixins.interfaces.IMixinPlayerListS2CPacket;
 import me.THEREALWWEFAN231.tunnelmc.translator.PacketTranslator;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
-import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket.Entry;
-import net.minecraft.text.LiteralText;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.GameType;
 
@@ -20,20 +23,28 @@ public class PlayerListPacketTranslator extends PacketTranslator<PlayerListPacke
 	@Override
 	public void translate(PlayerListPacket packet) {
 		boolean add = packet.getAction() == PlayerListPacket.Action.ADD;
-		List<Entry> entries = new ArrayList<>();
 
-		PlayerListS2CPacket playerListS2CPacket = new PlayerListS2CPacket();
-		((IMixinPlayerListS2CPacket) playerListS2CPacket).setAction(add ? PlayerListS2CPacket.Action.ADD_PLAYER : PlayerListS2CPacket.Action.REMOVE_PLAYER);
-		((IMixinPlayerListS2CPacket) playerListS2CPacket).setEntries(entries);
-
-		for (PlayerListPacket.Entry entry : packet.getEntries()) {
-			if (add) {
-
+		if (!add) {
+			List<UUID> removedProfileIds = new ArrayList<>();
+			for (PlayerListPacket.Entry entry : packet.getEntries()) {
+				removedProfileIds.add(entry.getUuid());
 			}
 
-			// gamemode says nullable but is used in ClientGameSession/:
-			entries.add(playerListS2CPacket.new Entry(new GameProfile(entry.getUuid(), entry.getName()), 0, GameMode.SURVIVAL, new LiteralText(entry.getName())));
+			ClientboundPlayerInfoRemovePacket removePacket = new ClientboundPlayerInfoRemovePacket(removedProfileIds);
+			Client.instance.javaConnection.processServerToClientPacket(removePacket);
+			return;
 		}
+
+		List<ClientboundPlayerInfoUpdatePacket.Entry> entries = new ArrayList<>();
+		for (PlayerListPacket.Entry entry : packet.getEntries()) {
+			// gamemode says nullable but is used in ClientGameSession/:
+			entries.add(new ClientboundPlayerInfoUpdatePacket.Entry(entry.getUuid(), new GameProfile(entry.getUuid(), entry.getName()),
+					true, 0, GameType.SURVIVAL, Component.literal(entry.getName()), true, 0, null));
+		}
+
+		ClientboundPlayerInfoUpdatePacket playerListS2CPacket = new ClientboundPlayerInfoUpdatePacket(
+				EnumSet.of(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER), Collections.emptyList());
+		((IMixinPlayerListS2CPacket) playerListS2CPacket).setEntries(entries);
 
 		Client.instance.javaConnection.processServerToClientPacket(playerListS2CPacket);
 	}

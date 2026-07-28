@@ -10,6 +10,7 @@ import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.RandomSource;
 
 public class LevelSoundEventTranslator extends PacketTranslator<LevelSoundEventPacket> {
     @Override
@@ -18,10 +19,10 @@ public class LevelSoundEventTranslator extends PacketTranslator<LevelSoundEventP
             case HIT:
                 BlockPos pos = PositionUtil.toBlockPos(packet.getPosition());
                 BlockState blockState = BlockPaletteTranslator.RUNTIME_ID_TO_BLOCK_STATE.get(packet.getExtraData());
-                BlockSoundGroup blockSoundGroup = blockState.getSoundGroup();
-                MinecraftClient.getInstance().getSoundManager().play(
-                        new PositionedSoundInstance(blockSoundGroup.getHitSound(), SoundCategory.BLOCKS,
-                                (blockSoundGroup.getVolume() + 1.0F) / 8.0F, blockSoundGroup.getPitch() * 0.5F, pos));
+                SoundType soundType = blockState.getSoundType();
+                Minecraft.getInstance().getSoundManager().play(
+                        new SimpleSoundInstance(soundType.getHitSound(), SoundSource.BLOCKS,
+                                (soundType.getVolume() + 1.0F) / 8.0F, soundType.getPitch() * 0.5F, RandomSource.create(), pos));
                 break;
         }
     }
