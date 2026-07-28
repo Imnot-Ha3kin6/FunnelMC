@@ -38,6 +38,9 @@ public class BedrockConnectionScreen extends Screen {
 		this.addRenderableWidget(Button.builder(CommonComponents.GUI_CANCEL, button -> this.minecraft.setScreenAndShow(this.parent))
 				.pos(this.width / 2 - 102, this.height / 4 + 125 + 12).size(204, 20).build());
 
+		this.addRenderableWidget(Button.builder(Component.literal("Bedrock Friends"), button -> this.minecraft.setScreenAndShow(new FriendsListScreen(this)))
+				.pos(this.width / 2 - 102, this.height / 4 + 150 + 12).size(204, 20).build());
+
 		this.addressField = this.addRenderableWidget(new EditBox(this.font, this.width / 2 - 100, (this.height / 4) + 16, 200, 20, Component.literal("Enter IP")));
 		this.portField = this.addRenderableWidget(new EditBox(this.font, this.width / 2 - 100, (this.height / 4) + 46, 200, 20, Component.literal("Enter Port")));
 		this.onlineModeWidget = this.addRenderableWidget(Checkbox.builder(Component.literal("Online mode"), this.font)

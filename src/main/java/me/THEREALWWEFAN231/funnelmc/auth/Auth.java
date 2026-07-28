@@ -31,6 +31,16 @@ public class Auth {
 	private UUID identity;
 	private String displayName;
 
+	// Retained from getOnlineChainData() so getXboxLiveAuthorizationHeader() can request further
+	// XSTS tokens (e.g. for the general Xbox Live API used by the friends list) without repeating
+	// the user/device/title token exchange.
+	private Xbox xbox;
+	private String userToken;
+	private String deviceToken;
+	private String titleToken;
+	private ECPublicKey xboxLiveKeyPublicKey;
+	private ECPrivateKey xboxLiveKeyPrivateKey;
+
 	// msaAccessToken comes from DeviceCodeAuth.pollForAccessToken() - see Client#initialize
 	public List<String> getOnlineChainData(String msaAccessToken) throws Exception {
 		Gson gson = FunnelMC.instance.fileManagement.normalGson;
@@ -38,11 +48,13 @@ public class Auth {
 		KeyPair ecdsa256KeyPair = Auth.createKeyPair();//for xbox live, xbox live requests use, ES256, ECDSA256
 		this.publicKey = (ECPublicKey) ecdsa256KeyPair.getPublic();
 		this.privateKey = (ECPrivateKey) ecdsa256KeyPair.getPrivate();
+		this.xboxLiveKeyPublicKey = this.publicKey;
+		this.xboxLiveKeyPrivateKey = this.privateKey;
 
-		Xbox xbox = new Xbox(msaAccessToken);
-		String userToken = xbox.getUserToken(this.publicKey, this.privateKey);
-		String deviceToken = xbox.getDeviceToken(this.publicKey, this.privateKey);
-		String titleToken = xbox.getTitleToken(this.publicKey, this.privateKey, deviceToken);
+		this.xbox = new Xbox(msaAccessToken);
+		this.userToken = xbox.getUserToken(this.publicKey, this.privateKey);
+		this.deviceToken = xbox.getDeviceToken(this.publicKey, this.privateKey);
+		this.titleToken = xbox.getTitleToken(this.publicKey, this.privateKey, deviceToken);
 		String xsts = xbox.getXstsToken(userToken, deviceToken, titleToken, this.publicKey, this.privateKey);
 
 		KeyPair ecdsa384KeyPair = EncryptionUtils.createKeyPair();//use ES384, ECDSA384
@@ -104,6 +116,15 @@ public class Auth {
 			chain.add(jsonElement.getAsString());
 		}
 		return chain;
+	}
+
+	// Requests a second XSTS token scoped for general Xbox Live APIs (friends, presence,
+	// multiplayer session directory) instead of logging into Minecraft, reusing the
+	// user/device/title tokens obtained by getOnlineChainData() rather than redoing that exchange.
+	// Must be called after getOnlineChainData().
+	public String getXboxLiveAuthorizationHeader() throws Exception {
+		String xsts = this.xbox.getXstsToken(this.userToken, this.deviceToken, this.titleToken, this.xboxLiveKeyPublicKey, this.xboxLiveKeyPrivateKey, "http://xboxlive.com");
+		return Xbox.buildAuthorizationHeader(xsts);
 	}
 
 	public List<String> getOfflineChainData(String username) throws Exception {

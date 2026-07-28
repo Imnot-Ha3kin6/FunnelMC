@@ -63,6 +63,18 @@ public class Client {
 		this.initialize(ip, port, onlineMode, null);
 	}
 
+	// For callers that already logged in (e.g. FriendsListScreen, which needs a login just to
+	// list friends before the player picks one to join) - skips the device code flow entirely
+	// instead of making the player log in again for every join.
+	public void connectWithExistingAuth(String ip, int port, Auth authData, List<String> onlineChainData) {
+		this.ip = ip;
+		this.port = port;
+		this.onlineMode = true;
+		this.authData = authData;
+		this.onlineChainData = onlineChainData;
+		this.connect();
+	}
+
 	public void initialize(String ip, int port, boolean onlineMode, AuthListener authListener) {
 		this.ip = ip;
 		this.port = port;

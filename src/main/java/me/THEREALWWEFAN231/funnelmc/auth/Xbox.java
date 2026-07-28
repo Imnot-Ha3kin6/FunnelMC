@@ -161,10 +161,16 @@ public class Xbox {
 	}
 
 	public String getXstsToken(String userToken, String deviceToken, String titleToken, ECPublicKey publicKey, ECPrivateKey privateKey) throws Exception {
+		return this.getXstsToken(userToken, deviceToken, titleToken, publicKey, privateKey, "https://multiplayer.minecraft.net/");
+	}
+
+	// relyingParty "http://xboxlive.com" gets a token for general Xbox Live APIs (friends,
+	// presence, multiplayer session directory) rather than logging into a Minecraft server.
+	public String getXstsToken(String userToken, String deviceToken, String titleToken, ECPublicKey publicKey, ECPrivateKey privateKey, String relyingParty) throws Exception {
 
 		JsonObject jsonObject = new JsonObject();
 
-		jsonObject.addProperty("RelyingParty", "https://multiplayer.minecraft.net/");
+		jsonObject.addProperty("RelyingParty", relyingParty);
 		jsonObject.addProperty("TokenType", "JWT");
 
 		JsonObject properties = new JsonObject();
@@ -220,6 +226,14 @@ public class Xbox {
 		this.writeJsonObjectToPost(connection, jsonObject);
 
 		return FunnelMC.instance.fileManagement.getTextFromInputStream(connection.getInputStream());
+	}
+
+	// Builds the "XBL3.0 x=<uhs>;<token>" Authorization header value from a raw XSTS token
+	// response, same shape used inline by requestMinecraftChain above.
+	public static String buildAuthorizationHeader(String xstsResponseJson) throws Exception {
+		JsonObject xstsObject = FunnelMC.instance.fileManagement.jsonParser.parse(xstsResponseJson).getAsJsonObject();
+		String uhs = xstsObject.get("DisplayClaims").getAsJsonObject().getAsJsonArray("xui").getAsJsonArray().get(0).getAsJsonObject().get("uhs").getAsString();
+		return "XBL3.0 x=" + uhs + ";" + xstsObject.get("Token").getAsString();
 	}
 
 	private void writeJsonObjectToPost(HttpsURLConnection connection, JsonObject jsonObject) throws Exception {
