@@ -1,0 +1,24 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "me.THEREALWWEFAN231.funnelmc.mixins",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "MixinAbstractClientPlayerEntity",
+    "MixinClientConnection",
+    "MixinClientPlayerEntity",
+    "MixinGameRenderer",
+    "MixinKeyboard",
+    "MixinMinecraftClient",
+    "MixinMultiplayerScreen",
+    "MixinScreenHandler",
+    "interfaces.IMixinPlayerListS2CPacket",
+    "interfaces.IMixinSlot"
+  ],
+  "mixins": [
+    "MixinBlock",
+    "MixinClientPlayerInteractionHandler",
+    "MixinWorldRenderer",
+    "interfaces.IMixinClientPlayerInteractionManager"
+  ]
+}
