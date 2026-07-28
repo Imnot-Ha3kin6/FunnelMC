@@ -7,6 +7,7 @@ import com.mojang.authlib.GameProfile;
 import me.THEREALWWEFAN231.funnelmc.FunnelMC;
 import me.THEREALWWEFAN231.funnelmc.bedrockconnection.Client;
 import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.client.multiplayer.ClientRegistryLayer;
 import net.minecraft.client.multiplayer.CommonListenerCookie;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.Connection;
@@ -26,10 +27,13 @@ public class FakeJavaConnection {
 		this.connection = new Connection(PacketFlow.CLIENTBOUND);
 		GameProfile gameProfile = new GameProfile(Client.instance.authData.getIdentity(), Client.instance.authData.getDisplayName());
 		// TODO: several of these cookie fields are placeholders (null/empty) since we have no
-		// real Java server to source them from - registry access in particular (see
-		// DimensionTranslator/StartGameTranslator TODOs) needs bundled vanilla registry data
-		// before this is more than "compiles".
-		CommonListenerCookie cookie = new CommonListenerCookie(null, gameProfile, null, RegistryAccess.EMPTY, FeatureFlags.VANILLA_SET, "funnelmc",
+		// real Java server to source them from. Registry access uses the same static/built-in
+		// layer vanilla itself falls back on before connecting to any server (item/block
+		// registries etc.) - ClientPacketListener's constructor needs at least that much (e.g.
+		// FuelValues reads the item registry); dynamic per-world registry data a real server
+		// would send just isn't available here.
+		RegistryAccess.Frozen registryAccess = ClientRegistryLayer.createRegistryAccess().compositeAccess();
+		CommonListenerCookie cookie = new CommonListenerCookie(null, gameProfile, null, registryAccess, FeatureFlags.VANILLA_SET, "funnelmc",
 				null, null, Collections.emptyMap(), null, Collections.emptyMap(), ServerLinks.EMPTY, Collections.emptyMap(), false);
 		this.clientPacketListener = new ClientPacketListener(FunnelMC.mc, this.connection, cookie);
 		this.packetTranslatorManager = new JavaPacketTranslatorManager();

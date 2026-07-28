@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import org.cloudburstmc.protocol.bedrock.BedrockClientSession;
 import org.cloudburstmc.protocol.bedrock.codec.BedrockCodec;
 import org.cloudburstmc.protocol.bedrock.codec.v1001.Bedrock_v1001;
+import org.cloudburstmc.protocol.bedrock.data.auth.AuthType;
 import org.cloudburstmc.protocol.bedrock.data.auth.CertificateChainPayload;
 import org.cloudburstmc.protocol.bedrock.netty.initializer.BedrockClientInitializer;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
@@ -143,10 +144,10 @@ public class Client {
 			LoginPacket loginPacket = new LoginPacket();
 
 			if (this.onlineMode) {
-				loginPacket.setAuthPayload(new CertificateChainPayload(this.onlineChainData));
+				loginPacket.setAuthPayload(new CertificateChainPayload(this.onlineChainData, AuthType.FULL));
 			} else {
 				this.authData = new Auth();
-				loginPacket.setAuthPayload(new CertificateChainPayload(this.authData.getOfflineChainData(Minecraft.getInstance().getUser().getName())));
+				loginPacket.setAuthPayload(new CertificateChainPayload(this.authData.getOfflineChainData(Minecraft.getInstance().getUser().getName()), AuthType.SELF_SIGNED));
 			}
 
 			loginPacket.setProtocolVersion(bedrockSession.getCodec().getProtocolVersion());
