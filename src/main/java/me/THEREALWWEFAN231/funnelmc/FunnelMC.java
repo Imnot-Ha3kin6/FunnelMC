@@ -1,5 +1,8 @@
 package me.THEREALWWEFAN231.funnelmc;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import me.THEREALWWEFAN231.funnelmc.translator.EntityTranslator;
 import me.THEREALWWEFAN231.funnelmc.translator.PacketTranslatorManager;
 import me.THEREALWWEFAN231.funnelmc.translator.blockentity.BlockEntityRegistry;
@@ -18,11 +21,19 @@ public class FunnelMC {
 	public static FunnelMC instance = new FunnelMC();
 	public static Minecraft mc = Minecraft.getInstance();
 
+	// Bumped by hand on every build sent to the tester - logged first thing on startup so a fresh
+	// funnelmc.log can always be checked against this string to confirm which jar actually produced
+	// it, instead of guessing from error line numbers whether an old build is still in use.
+	public static final String BUILD_ID = "chunk-v9-fix-2026-07-28";
+
 	public FileManagement fileManagement;
 	public PacketTranslatorManager packetTranslatorManager;
 
 	public void initialize() {
 		FunnelLogSetup.install();
+
+		Logger startupLogger = LogManager.getLogger(FunnelMC.class);
+		startupLogger.warn("FunnelMC starting, BUILD_ID={}", BUILD_ID);
 
 		this.fileManagement = new FileManagement();
 		this.packetTranslatorManager = new PacketTranslatorManager();
