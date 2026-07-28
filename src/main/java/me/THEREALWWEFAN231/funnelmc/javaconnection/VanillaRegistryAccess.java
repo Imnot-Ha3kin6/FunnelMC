@@ -6,6 +6,8 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.core.LayeredRegistryAccess;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.component.DataComponentInitializers;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.RegistryDataLoader;
 import net.minecraft.server.RegistryLayer;
 import net.minecraft.server.packs.PackType;
@@ -72,7 +74,19 @@ public class VanillaRegistryAccess {
 			// referenced their patched-but-not-yet-applied view has actually succeeded.
 			staticTags.forEach(Registry.PendingTags::apply);
 
-			return layers.replaceFrom(RegistryLayer.WORLDGEN, worldgenRegistries).compositeAccess();
+			RegistryAccess.Frozen compositeAccess = layers.replaceFrom(RegistryLayer.WORLDGEN, worldgenRegistries).compositeAccess();
+
+			// Every registry element's default DataComponentMap (item max stack size, food, durability,
+			// ...) starts unbound - Holder.Reference#components() throws "Components not bound yet"
+			// until something calls bindComponents() on it. On a real connection that's the last step of
+			// WorldLoader.load() (ReloadableServerResources.loadResources() ->
+			// updateComponentsAndStaticRegistryTags()), which only runs when actually joining a world;
+			// there's no world here for it to run against, so items were unusable the instant real
+			// gameplay code (e.g. ItemStack's constructor) touched one.
+			List<DataComponentInitializers.PendingComponents<?>> pendingComponents = BuiltInRegistries.DATA_COMPONENT_INITIALIZERS.build(compositeAccess);
+			pendingComponents.forEach(DataComponentInitializers.PendingComponents::apply);
+
+			return compositeAccess;
 		}
 	}
 
