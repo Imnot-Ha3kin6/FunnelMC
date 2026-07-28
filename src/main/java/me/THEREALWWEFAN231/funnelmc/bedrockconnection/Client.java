@@ -14,6 +14,8 @@ import org.cloudburstmc.protocol.bedrock.data.auth.CertificateChainPayload;
 import org.cloudburstmc.protocol.bedrock.netty.initializer.BedrockClientInitializer;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
 import org.cloudburstmc.protocol.bedrock.packet.LoginPacket;
+import org.cloudburstmc.protocol.bedrock.packet.NetworkSettingsPacket;
+import org.cloudburstmc.protocol.bedrock.packet.RequestNetworkSettingsPacket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
@@ -140,6 +142,20 @@ public class Client {
 	public void onSessionInitialized(BedrockClientSession bedrockSession) {
 		this.bedrockSession = bedrockSession;
 
+		// Real Bedrock servers (including Geyser) expect this handshake before LoginPacket - it's
+		// how the server learns our protocol version and tells us what compression to use. Skipping
+		// straight to LoginPacket leaves the server's pre-negotiation pipeline treating us as an
+		// unrecognized/legacy client, which can't parse our (correct, modern) login payload.
+		RequestNetworkSettingsPacket requestNetworkSettingsPacket = new RequestNetworkSettingsPacket();
+		requestNetworkSettingsPacket.setProtocolVersion(bedrockSession.getCodec().getProtocolVersion());
+		this.sendPacketImmediately(requestNetworkSettingsPacket);
+	}
+
+	// Called by ClientBatchHandler once the server responds to RequestNetworkSettingsPacket - only
+	// safe to send LoginPacket after this, once we're using the compression the server told us to.
+	public void onNetworkSettings(NetworkSettingsPacket packet) {
+		this.bedrockSession.setCompression(packet.getCompressionAlgorithm());
+
 		try {
 			LoginPacket loginPacket = new LoginPacket();
 
@@ -150,7 +166,7 @@ public class Client {
 				loginPacket.setAuthPayload(new CertificateChainPayload(this.authData.getOfflineChainData(Minecraft.getInstance().getUser().getName()), AuthType.SELF_SIGNED));
 			}
 
-			loginPacket.setProtocolVersion(bedrockSession.getCodec().getProtocolVersion());
+			loginPacket.setProtocolVersion(this.bedrockSession.getCodec().getProtocolVersion());
 			loginPacket.setClientJwt(SkinData.getSkinData(this.ip + ":" + this.port));
 			this.sendPacketImmediately(loginPacket);
 

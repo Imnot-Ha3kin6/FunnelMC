@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket;
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacketHandler;
+import org.cloudburstmc.protocol.bedrock.packet.NetworkSettingsPacket;
 import org.cloudburstmc.protocol.common.PacketSignal;
 
 import me.THEREALWWEFAN231.funnelmc.FunnelMC;
@@ -18,6 +19,14 @@ public class ClientBatchHandler implements BedrockPacketHandler {
 		if (Client.instance.bedrockSession != null && Client.instance.bedrockSession.isLogging()) {
 			//so yeah.... the default logger, in nukkitx is kind of lame, and in our case trace isn't enabled so we will just do this for now
 			this.logger.info("Inbound {}: {}", Client.instance.bedrockSession.getSocketAddress(), packet.toString().substring(0, Math.min(packet.toString().length(), 200)));
+		}
+
+		// The server's reply to RequestNetworkSettingsPacket - has to be handled here rather than
+		// through the regular translator pipeline since it's part of pre-login handshake, not
+		// gameplay, and it's what unblocks actually sending LoginPacket.
+		if (packet instanceof NetworkSettingsPacket) {
+			Client.instance.onNetworkSettings((NetworkSettingsPacket) packet);
+			return PacketSignal.HANDLED;
 		}
 
 		FunnelMC.instance.packetTranslatorManager.translatePacket(packet);
