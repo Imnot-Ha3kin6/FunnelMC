@@ -2,21 +2,25 @@ package me.THEREALWWEFAN231.funnelmc.debug;
 
 import java.lang.reflect.Field;
 
-import com.darkmagician6.eventapi.EventManager;
-import com.darkmagician6.eventapi.EventTarget;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import me.THEREALWWEFAN231.funnelmc.FunnelMC;
-import me.THEREALWWEFAN231.funnelmc.events.EventPlayerTick;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 
 // Temporary instrumentation for the "stuck on Loading Terrain" investigation - reflectively dumps
 // ClientPacketListener's private levelLoadTracker state once a second so we can see which of
 // LevelLoadTracker's three states (WaitingForServer / WaitingForPlayerChunk / ClientLevelReady) the
-// vanilla dismissal logic is actually stuck in, instead of guessing from outside. Remove once the
-// stuck-loading-screen issue is resolved.
+// vanilla dismissal logic is actually stuck in, instead of guessing from outside.
+//
+// Deliberately hooked to Fabric API's END_CLIENT_TICK rather than this mod's own EventPlayerTick:
+// EventPlayerTick is fired from a mixin into LocalPlayer.tick(), but that method's entire body -
+// including the injection point - is gated behind `this.connection.hasClientLoaded()`, which is
+// only ever set true by the exact "level ready" transition this diagnostic exists to observe. Using
+// EventPlayerTick here would create the mod's own chicken-and-egg deadlock and never fire at all.
+//
+// Remove once the stuck-loading-screen issue is resolved.
 public class LoadTrackerDiagnostics {
 
 	private static final Logger logger = LogManager.getLogger(LoadTrackerDiagnostics.class);
@@ -24,11 +28,10 @@ public class LoadTrackerDiagnostics {
 	private int tickCounter;
 
 	public LoadTrackerDiagnostics() {
-		EventManager.register(this);
+		ClientTickEvents.END_CLIENT_TICK.register(minecraft -> this.onClientTick());
 	}
 
-	@EventTarget
-	public void onEvent(EventPlayerTick event) {
+	private void onClientTick() {
 		this.tickCounter++;
 		if (this.tickCounter % 20 != 0) {
 			return;
