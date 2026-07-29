@@ -44,6 +44,19 @@ public class DeviceCodeAuth {
 		}
 	}
 
+	// refresh_token is long-lived (weeks, on a sliding window refreshed on every use) unlike
+	// access_token (about an hour), so persisting it is what lets a later launch skip the device
+	// code screen entirely - see AuthTokenStore and MicrosoftLoginScreen's silent-refresh attempt.
+	public static class TokenResponse {
+		public final String accessToken;
+		public final String refreshToken;
+
+		public TokenResponse(String accessToken, String refreshToken) {
+			this.accessToken = accessToken;
+			this.refreshToken = refreshToken;
+		}
+	}
+
 	public static DeviceCodeInfo requestDeviceCode() throws Exception {
 		JsonObject response = post(DEVICE_CODE_URL, "client_id=" + CLIENT_ID + "&scope=" + urlEncode(SCOPE) + "&response_type=device_code");
 
@@ -57,7 +70,7 @@ public class DeviceCodeAuth {
 
 	// Blocks (polling every `interval` seconds) until the player finishes logging in, the code
 	// expires, or something goes wrong. Call this off the render thread.
-	public static String pollForAccessToken(DeviceCodeInfo deviceCodeInfo) throws Exception {
+	public static TokenResponse pollForAccessToken(DeviceCodeInfo deviceCodeInfo) throws Exception {
 		long deadline = System.currentTimeMillis() + deviceCodeInfo.expiresIn * 1000L;
 
 		while (System.currentTimeMillis() < deadline) {
@@ -66,7 +79,8 @@ public class DeviceCodeAuth {
 			JsonObject response = post(TOKEN_URL, "client_id=" + CLIENT_ID + "&device_code=" + urlEncode(deviceCodeInfo.deviceCode) + "&grant_type=device_code");
 
 			if (response.has("access_token")) {
-				return response.get("access_token").getAsString();
+				return new TokenResponse(response.get("access_token").getAsString(),
+						response.has("refresh_token") ? response.get("refresh_token").getAsString() : null);
 			}
 
 			String error = response.has("error") ? response.get("error").getAsString() : "unknown_error";
@@ -76,6 +90,22 @@ public class DeviceCodeAuth {
 		}
 
 		throw new Exception("Microsoft login code expired before you finished logging in.");
+	}
+
+	// Silently exchanges a previously-saved refresh_token for a fresh access_token, skipping the
+	// device code screen entirely. Throws if the refresh token was revoked or has expired (its
+	// sliding window lapses after ~90 days of the player not launching the game).
+	public static TokenResponse refreshAccessToken(String refreshToken) throws Exception {
+		JsonObject response = post(TOKEN_URL, "client_id=" + CLIENT_ID + "&scope=" + urlEncode(SCOPE)
+				+ "&refresh_token=" + urlEncode(refreshToken) + "&grant_type=refresh_token");
+
+		if (!response.has("access_token")) {
+			String error = response.has("error") ? response.get("error").getAsString() : "unknown_error";
+			throw new Exception("Token refresh failed: " + error);
+		}
+
+		return new TokenResponse(response.get("access_token").getAsString(),
+				response.has("refresh_token") ? response.get("refresh_token").getAsString() : refreshToken);
 	}
 
 	private static JsonObject post(String urlString, String body) throws Exception {

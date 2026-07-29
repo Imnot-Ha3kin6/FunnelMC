@@ -79,6 +79,17 @@ dependencies {
 		implementation it
 		include it
 	}
+
+	// NetherNet transport (WebRTC data channels) - no pure-Java WebRTC stack exists, so this is a
+	// JNI wrapper around Google's libwebrtc. Two artifacts are needed: the unclassified one (the
+	// actual Java classes - just picking a classifier alone gives a jar with only a native .dll/.so
+	// and no .class files at all) and the windows-x86_64 classifier (the native library itself,
+	// pinned explicitly since the unclassified artifact's transitive natives would resolve for
+	// whatever OS *this build* runs on - a Linux sandbox - not the tester's actual Windows machine).
+	implementation "dev.onvoid.webrtc:webrtc-java:${project.webrtc_java_version}"
+	include "dev.onvoid.webrtc:webrtc-java:${project.webrtc_java_version}"
+	implementation group: "dev.onvoid.webrtc", name: "webrtc-java", version: "${project.webrtc_java_version}", classifier: "windows-x86_64"
+	include group: "dev.onvoid.webrtc", name: "webrtc-java", version: "${project.webrtc_java_version}", classifier: "windows-x86_64"
 }
 
 processResources {

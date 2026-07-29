@@ -18,6 +18,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.cloudburstmc.protocol.bedrock.util.EncryptionUtils;
 
 import me.THEREALWWEFAN231.funnelmc.FunnelMC;
@@ -123,7 +125,25 @@ public class Auth {
 	// user/device/title tokens obtained by getOnlineChainData() rather than redoing that exchange.
 	// Must be called after getOnlineChainData().
 	public String getXboxLiveAuthorizationHeader() throws Exception {
-		String xsts = this.xbox.getXstsToken(this.userToken, this.deviceToken, this.titleToken, this.xboxLiveKeyPublicKey, this.xboxLiveKeyPrivateKey, "http://xboxlive.com");
+		return this.getXboxTokenForRelyingParty("http://xboxlive.com");
+	}
+
+	// Same idea as getXboxLiveAuthorizationHeader(), but for an arbitrary relying party - needed for
+	// PlayFab login (NetherNet's MCToken chain), which requires an XSTS token scoped specifically to
+	// "rp://playfabapi.com/" rather than the general Xbox Live one. Must be called after
+	// getOnlineChainData().
+	public String getXboxTokenForRelyingParty(String relyingParty) throws Exception {
+		String xsts = this.xbox.getXstsToken(this.userToken, this.deviceToken, this.titleToken, this.xboxLiveKeyPublicKey, this.xboxLiveKeyPrivateKey, relyingParty);
+		// The "prv" (privileges) and "agg" (age group) claims here explain permission-flavored MPSD
+		// errors ("must have the multiplayer privilege...") that plain 403 bodies don't - logging
+		// them lets that be confirmed/ruled out from evidence instead of guessed at.
+		try {
+			JsonObject xui = FunnelMC.instance.fileManagement.jsonParser.parse(xsts).getAsJsonObject()
+					.getAsJsonObject("DisplayClaims").getAsJsonArray("xui").get(0).getAsJsonObject();
+			LogManager.getLogger(Auth.class).warn("[FriendsDiag] XSTS DisplayClaims.xui[0] for relyingParty={}: {}", relyingParty, xui);
+		} catch (Exception e) {
+			LogManager.getLogger(Auth.class).warn("[FriendsDiag] Failed to log XSTS DisplayClaims for relyingParty={}", relyingParty, e);
+		}
 		return Xbox.buildAuthorizationHeader(xsts);
 	}
 

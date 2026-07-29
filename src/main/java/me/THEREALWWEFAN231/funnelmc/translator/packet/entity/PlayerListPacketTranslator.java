@@ -1,5 +1,6 @@
 package me.THEREALWWEFAN231.funnelmc.translator.packet.entity;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -10,7 +11,6 @@ import com.mojang.authlib.GameProfile;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerListPacket;
 
 import me.THEREALWWEFAN231.funnelmc.bedrockconnection.Client;
-import me.THEREALWWEFAN231.funnelmc.mixins.interfaces.IMixinPlayerListS2CPacket;
 import me.THEREALWWEFAN231.funnelmc.translator.PacketTranslator;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
@@ -19,6 +19,23 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.GameType;
 
 public class PlayerListPacketTranslator extends PacketTranslator<PlayerListPacket> {
+
+	// None of ClientboundPlayerInfoUpdatePacket's real constructors take a plain List<Entry> - they
+	// all build entries from real ServerPlayer instances, which we don't have. A Mixin @Accessor
+	// setter for the (final) entries field used to fill this gap, but Mixin didn't strip the field's
+	// finality here, so writing through it threw IllegalAccessError at runtime ("Update to
+	// non-static final field ... attempted from a different method (setEntries) than the
+	// initializer method <init>"). Plain reflection works fine for a per-instance final field like
+	// this one, unlike a static final, so that's what's used instead.
+	private static final Field ENTRIES_FIELD;
+	static {
+		try {
+			ENTRIES_FIELD = ClientboundPlayerInfoUpdatePacket.class.getDeclaredField("entries");
+			ENTRIES_FIELD.setAccessible(true);
+		} catch (NoSuchFieldException e) {
+			throw new ExceptionInInitializerError(e);
+		}
+	}
 
 	@Override
 	public void translate(PlayerListPacket packet) {
@@ -44,7 +61,12 @@ public class PlayerListPacketTranslator extends PacketTranslator<PlayerListPacke
 
 		ClientboundPlayerInfoUpdatePacket playerListS2CPacket = new ClientboundPlayerInfoUpdatePacket(
 				EnumSet.of(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER), Collections.emptyList());
-		((IMixinPlayerListS2CPacket) playerListS2CPacket).setEntries(entries);
+
+		try {
+			ENTRIES_FIELD.set(playerListS2CPacket, entries);
+		} catch (IllegalAccessException e) {
+			throw new RuntimeException(e);
+		}
 
 		Client.instance.javaConnection.processServerToClientPacket(playerListS2CPacket);
 	}

@@ -11,8 +11,10 @@ import me.THEREALWWEFAN231.funnelmc.translator.PacketTranslator;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
+import net.minecraft.network.syncher.SynchedEntityData;
 
 import java.util.EnumMap;
+import java.util.List;
 
 public class SetEntityDataPacketTranslator extends PacketTranslator<SetEntityDataPacket> {
 	@Override
@@ -43,8 +45,15 @@ public class SetEntityDataPacketTranslator extends PacketTranslator<SetEntityDat
 				entity.setPose(sneaking ? Pose.CROUCHING : Pose.STANDING);
 			}
 
-			ClientboundSetEntityDataPacket trackerUpdatePacket = new ClientboundSetEntityDataPacket(id, entity.getEntityData().packDirty());
-			Client.instance.javaConnection.processServerToClientPacket(trackerUpdatePacket);
+			// packDirty() returns null (not an empty list) when nothing was actually marked dirty
+			// above - e.g. a SetEntityDataPacket that only carried keys we don't translate yet.
+			// ClientboundSetEntityDataPacket's own handler assumes a real server would only ever send
+			// one when there's something to pack, so it iterates the list with no null check.
+			List<SynchedEntityData.DataValue<?>> dirty = entity.getEntityData().packDirty();
+			if (dirty != null) {
+				ClientboundSetEntityDataPacket trackerUpdatePacket = new ClientboundSetEntityDataPacket(id, dirty);
+				Client.instance.javaConnection.processServerToClientPacket(trackerUpdatePacket);
+			}
 		}
 	}
 

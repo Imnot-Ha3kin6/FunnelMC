@@ -39,7 +39,6 @@ public class PacketTranslatorManager {
 		this.addTranslator(new AddItemEntityPacketTranslator());
 		this.addTranslator(new MovePlayerPacketTranslator());
 		this.addTranslator(new MoveEntityAbsolutePacketTranslator());
-		this.addTranslator(new ServerToClientHandshakePacketTranslator());
 		this.addTranslator(new UpdateBlockTranslator());
 		this.addTranslator(new SetEntityMotionTranslator());
 		this.addTranslator(new TakeItemEntityPacketTranslator());

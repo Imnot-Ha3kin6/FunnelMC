@@ -17,6 +17,13 @@ public class UpdateBlockTranslator extends PacketTranslator<UpdateBlockPacket> {
 	
 	@Override
 	public void translate(UpdateBlockPacket packet) {
+		if (packet.getDefinition() == null) {
+			// Definition can be null if the block runtime ID wasn't in our block palette (or the
+			// packet decoded against a codec helper that wasn't fully populated yet) - nothing
+			// sane to update the block to in that case.
+			return;
+		}
+
 		BlockPos blockPos = new BlockPos(packet.getBlockPosition().getX(), packet.getBlockPosition().getY(), packet.getBlockPosition().getZ());
 		if (packet.getDataLayer() == 0) {
 			BlockState blockState = BlockPaletteTranslator.RUNTIME_ID_TO_BLOCK_STATE.get(packet.getDefinition().getRuntimeId());

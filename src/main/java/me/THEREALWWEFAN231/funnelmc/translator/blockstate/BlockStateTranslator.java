@@ -32,6 +32,12 @@ public class BlockStateTranslator {
 	
 	public static final HashMap<String, BlockState> BEDROCK_BLOCK_STATE_STRING_TO_JAVA_BLOCK_STATE = new HashMap<String, BlockState>();
 
+	// Kept around (rather than a local variable in load()) so ClientBatchHandler can re-key this same
+	// bundled palette against isBlockNetworkIdsHashed() once a real connection tells us which ID scheme
+	// this specific server actually uses - see BlockPaletteTranslator.loadMap's javadoc for why that
+	// matters.
+	public static NbtList<NbtMap> BUNDLED_BLOCK_PALETTE;
+
 	public static void load() {
 
 		JsonObject jsonObject = FunnelMC.instance.fileManagement.getJsonObjectFromResource("geyser/blocks.json");
@@ -95,7 +101,11 @@ public class BlockStateTranslator {
 		} catch (Exception e) {
 			throw new AssertionError("Unable to get blocks from runtime block states", e);
 		}
-		BlockPaletteTranslator.loadMap(blocksTag);
+		BUNDLED_BLOCK_PALETTE = blocksTag;
+		// No connection exists yet at mod startup, so we don't know which ID scheme any future server
+		// will use - ClientBatchHandler reloads this same list with the right value once a connection's
+		// StartGamePacket says so.
+		BlockPaletteTranslator.loadMap(blocksTag, false);
 
 	}
 

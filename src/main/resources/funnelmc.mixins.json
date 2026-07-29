@@ -8,13 +8,13 @@
   "client": [
     "MixinAbstractClientPlayerEntity",
     "MixinClientConnection",
+    "MixinClientPacketListenerTickDiag",
     "MixinClientPlayerEntity",
     "MixinGameRenderer",
     "MixinKeyboard",
     "MixinMinecraftClient",
     "MixinMultiplayerScreen",
     "MixinScreenHandler",
-    "interfaces.IMixinPlayerListS2CPacket",
     "interfaces.IMixinSlot"
   ],
   "mixins": [

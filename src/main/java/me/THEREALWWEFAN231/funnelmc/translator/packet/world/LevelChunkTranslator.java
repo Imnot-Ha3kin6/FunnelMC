@@ -2,6 +2,8 @@ package me.THEREALWWEFAN231.funnelmc.translator.packet.world;
 
 import com.darkmagician6.eventapi.EventManager;
 import com.darkmagician6.eventapi.EventTarget;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.cloudburstmc.nbt.NBTInputStream;
 import org.cloudburstmc.nbt.NbtMap;
 import org.cloudburstmc.nbt.NbtMapBuilder;
@@ -33,6 +35,8 @@ import java.util.BitSet;
 import java.util.List;
 
 public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
+
+	private final Logger logger = LogManager.getLogger(LevelChunkTranslator.class);
 
 	private final List<LevelChunkPacket> chunksOutOfRenderDistance = new ArrayList<>();
 
@@ -87,25 +91,93 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 			}
 		}
 
-		LevelChunkSection[] chunkSections = new LevelChunkSection[16];
+		// Java's section array for a modern world doesn't start at Y=0 - a -64..320 world has
+		// getMinSectionY()=-4, so section index 0 holds Y=-64..-49. Bedrock's legacy subchunk
+		// numbering (versions 1/8) is still just "the Nth subchunk in this packet is bedrock
+		// section Y=N", implicitly assuming a world that starts at Y=0 - so every bedrock section
+		// has to be placed at (bedrockSectionY - minSectionY) in Java's array, not at its raw
+		// packet-order index. Version 9 (the extended-height format) sends an explicit signed
+		// section Y instead of relying on packet order at all, for the same reason: sections
+		// aren't guaranteed contiguous from 0 in a world with negative height.
+		int minSectionY = FunnelMC.mc.level.getMinSectionY();
+		LevelChunkSection[] chunkSections = new LevelChunkSection[FunnelMC.mc.level.getSectionsCount()];
 
 		ByteBuf byteBuf = Unpooled.buffer();
+		// ClientBatchHandler retains this before deferring us onto the main thread (see its comment) -
+		// release our hold once we've copied what we need out of it.
 		byteBuf.writeBytes(packet.getData());
+		packet.getData().release();
 
 		for (int sectionIndex = 0; sectionIndex < packet.getSubChunksLength(); sectionIndex++) {
-			chunkSections[sectionIndex] = new LevelChunkSection(FunnelMC.mc.level.palettedContainerFactory());
 			int chunkVersion = byteBuf.readByte();
-			if (chunkVersion != 1 && chunkVersion != 8) {
-				manage0VersionChunk(byteBuf, chunkSections[sectionIndex]);
+
+			// Bedrock section Y defaults to the subchunk's position in the packet (versions 1/8,
+			// which predate negative height and always start at Y=0) - version 9 below overrides
+			// this with the real signed value it reads off the wire.
+			int sectionY = sectionIndex;
+
+			if (chunkVersion != 1 && chunkVersion != 8 && chunkVersion != 9) {
+				int javaSectionIndex = sectionY - minSectionY;
+				LevelChunkSection legacySection = new LevelChunkSection(FunnelMC.mc.level.palettedContainerFactory());
+				manage0VersionChunk(byteBuf, legacySection);
+				if (javaSectionIndex >= 0 && javaSectionIndex < chunkSections.length) {
+					chunkSections[javaSectionIndex] = legacySection;
+				}
 				continue;
 			}
 
 			byte storageSize = chunkVersion == 1 ? 1 : byteBuf.readByte();
 
+			// Version 9 is the extended-height subchunk format (introduced alongside the -64..320
+			// world height range) - unlike version 8, sections aren't guaranteed contiguous from Y=0
+			// anymore, so the server appends a signed Y index byte AFTER the storage count, before
+			// the same storage-layer data version 8 uses. The Y index was previously read in the
+			// wrong position (right after the version byte, before storage count), which fed the
+			// Y index into storageSize and vice versa - a small/negative "storageSize" silently
+			// skipped the storage-layer loop entirely, leaving that section's real data unconsumed
+			// and corrupting the read cursor for every section after it in the same packet.
+			if (chunkVersion == 9) {
+				sectionY = byteBuf.readByte();
+			}
+
+			int javaSectionIndex = sectionY - minSectionY;
+			LevelChunkSection section = new LevelChunkSection(FunnelMC.mc.level.palettedContainerFactory());
+			if (javaSectionIndex >= 0 && javaSectionIndex < chunkSections.length) {
+				chunkSections[javaSectionIndex] = section;
+			}
+
 			for (int storageReadIndex = 0; storageReadIndex < storageSize; storageReadIndex++) {
-				byte paletteHeader = byteBuf.readByte();
+				// paletteHeader must be treated as unsigned here - readByte() gives a signed byte,
+				// and >> on a byte widened to int is an arithmetic (sign-preserving) shift, so any
+				// header with bit 7 set previously produced a negative paletteVersion instead of the
+				// real bits-per-entry value, which BitArrayVersion.get() then rejected (or worse,
+				// matched nothing/threw), leaving the rest of this section's reads misaligned.
+				int paletteHeader = byteBuf.readByte() & 0xFF;
 				boolean isRuntime = (paletteHeader & 1) == 1;
-				int paletteVersion = (paletteHeader | 1) >> 1;
+				int paletteVersion = paletteHeader >> 1;
+
+				// bits-per-block of 0 is Bedrock's "single value" encoding: every block in this
+				// storage layer is the same one palette entry, so there's no bit array of indices
+				// on the wire at all - just the palette itself (always exactly one entry). Treating
+				// this as a normal BitArrayVersion was throwing "Invalid palette version: 0" and,
+				// worse, leaving the palette bytes unread and every subsequent read in the packet
+				// misaligned.
+				if (paletteVersion == 0) {
+					int[] singleValuePalette = readPalette(byteBuf, isRuntime, 1);
+					if (storageReadIndex == 0 && singleValuePalette[0] != BlockPaletteTranslator.AIR_BEDROCK_BLOCK_ID) {
+						BlockState blockState = BlockPaletteTranslator.RUNTIME_ID_TO_BLOCK_STATE.get(singleValuePalette[0]);
+						if (blockState != null) {
+							for (int x = 0; x < 16; x++) {
+								for (int z = 0; z < 16; z++) {
+									for (int y = 0; y < 16; y++) {
+										section.setBlockState(x, y, z, blockState);
+									}
+								}
+							}
+						}
+					}
+					continue;
+				}
 
 				BitArrayVersion bitArrayVersion = BitArrayVersion.get(paletteVersion, true);
 
@@ -119,22 +191,7 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 				}
 
 				int paletteSize = VarInts.readInt(byteBuf);
-				int[] sectionPalette = new int[paletteSize];
-				NBTInputStream nbtStream = isRuntime ? null : new NBTInputStream(new NetworkDataInputStream(new ByteBufInputStream(byteBuf)));
-				for (int i = 0; i < paletteSize; i++) {
-					if (isRuntime) {
-						sectionPalette[i] = VarInts.readInt(byteBuf);
-					} else {
-						try {
-							NbtMapBuilder map = ((NbtMap) nbtStream.readTag()).toBuilder();
-							// For some reason, persistent chunks don't include the "minecraft:" that should be used in state names.
-							map.replace("name", "minecraft:" + map.get("name").toString());
-							sectionPalette[i] = BlockPaletteTranslator.getBedrockBlockId(BlockPaletteTranslator.bedrockStateFromNBTMap(map.build()));
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-					}
-				}
+				int[] sectionPalette = readPalette(byteBuf, isRuntime, paletteSize);
 
 				if (storageReadIndex == 0) {
 					int index = 0;
@@ -147,7 +204,13 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 
 									BlockState blockState = BlockPaletteTranslator.RUNTIME_ID_TO_BLOCK_STATE.get(mcbeBlockId);
 
-									chunkSections[sectionIndex].setBlockState(x, y, z, blockState);
+									// Bedrock block runtime IDs the palette translator hasn't mapped to a Java
+									// BlockState (e.g. blocks with no Java equivalent yet) come back null here -
+									// setBlockState() requires a non-null state, so leave the position as its
+									// section default (air) instead of crashing the whole chunk translation.
+									if (blockState != null) {
+										section.setBlockState(x, y, z, blockState);
+									}
 								}
 								index++;
 							}
@@ -158,16 +221,18 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 		}
 
 		// TODO: biomes are no longer a flat per-chunk array in modern Minecraft (each LevelChunkSection
-		// carries its own PalettedContainerRO<Holder<Biome>>); for now we just consume the bytes off the
-		// wire and leave every section on its default biome, same as the pre-existing "TODO: biomes" gap.
-		byte[] bedrockBiomes = new byte[256];
-		byteBuf.readBytes(bedrockBiomes);
+		// carries its own PalettedContainerRO<Holder<Biome>>); for now we just consume the rest of the
+		// buffer and leave every section on its default biome, same as the pre-existing "TODO: biomes"
+		// gap. This is a per-subchunk palette in the modern Bedrock protocol, not a fixed-size flat
+		// array, so its length varies (and can be shorter than the old legacy 256-byte assumption,
+		// which threw IndexOutOfBoundsException on chunks with little/no remaining data).
+		byteBuf.skipBytes(byteBuf.readableBytes());
 
 		LevelChunk worldChunk = new LevelChunk(FunnelMC.mc.level, new ChunkPos(chunkX, chunkZ));
 
-		// TODO: modern worlds have a variable, negative-capable height range (e.g. -64..320, 24 sections)
-		// while this loop still assumes the legacy 0..255 / 16-section Bedrock layout, so translated
-		// chunks will render at the wrong Y offset until this is remapped against the real height range.
+		// chunkSections is already sized and indexed to match worldChunk's real height-shifted
+		// section array (see the javaSectionIndex computation above), so this is now a direct
+		// overlay rather than an assumption that both arrays start at the same Y.
 		LevelChunkSection[] sections = worldChunk.getSections();
 		for (int i = 0; i < sections.length && i < chunkSections.length; i++) {
 			if (chunkSections[i] != null) {
@@ -178,6 +243,30 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 		ClientboundLevelChunkWithLightPacket chunkDeltaUpdateS2CPacket = new ClientboundLevelChunkWithLightPacket(
 				worldChunk, FunnelMC.mc.level.getLightEngine(), new BitSet(), new BitSet());
 		Client.instance.javaConnection.processServerToClientPacket(chunkDeltaUpdateS2CPacket);
+
+		this.logger.warn("Translated+sent chunk ({}, {}): bedrock subChunksLength={}, java worldChunk sections={} (level minY={}, height={})",
+				chunkX, chunkZ, packet.getSubChunksLength(), sections.length,
+				FunnelMC.mc.level.getMinY(), FunnelMC.mc.level.getHeight());
+	}
+
+	private int[] readPalette(ByteBuf byteBuf, boolean isRuntime, int paletteSize) {
+		int[] palette = new int[paletteSize];
+		NBTInputStream nbtStream = isRuntime ? null : new NBTInputStream(new NetworkDataInputStream(new ByteBufInputStream(byteBuf)));
+		for (int i = 0; i < paletteSize; i++) {
+			if (isRuntime) {
+				palette[i] = VarInts.readInt(byteBuf);
+			} else {
+				try {
+					NbtMapBuilder map = ((NbtMap) nbtStream.readTag()).toBuilder();
+					// For some reason, persistent chunks don't include the "minecraft:" that should be used in state names.
+					map.replace("name", "minecraft:" + map.get("name").toString());
+					palette[i] = BlockPaletteTranslator.getBedrockBlockId(BlockPaletteTranslator.bedrockStateFromNBTMap(map.build()));
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		return palette;
 	}
 
 	/**
@@ -228,7 +317,16 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 				continue;
 			}
 
-			this.translate(levelChunkPacket);
+			try {
+				this.translate(levelChunkPacket);
+			} catch (Exception e) {
+				// A chunk that throws here would otherwise stay in this list forever and get
+				// retried (and rethrow) every single tick, flooding the log with duplicates of the
+				// same failure instead of surfacing it once. Drop it either way - retrying a chunk
+				// whose translate() already failed isn't going to make it succeed next tick.
+				this.logger.error("Failed to translate out-of-render-distance chunk ({}, {})",
+						levelChunkPacket.getChunkX(), levelChunkPacket.getChunkZ(), e);
+			}
 			this.chunksOutOfRenderDistance.remove(i);
 			i--;
 		}

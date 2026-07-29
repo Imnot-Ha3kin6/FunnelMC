@@ -21,6 +21,7 @@ public class ClientCommandC2SPacketTranslator extends PacketTranslator<Serverbou
 			playerActionPacket.setRuntimeEntityId(FunnelMC.mc.player.getId());
 			playerActionPacket.setAction(PlayerActionType.START_SPRINT);
 			playerActionPacket.setBlockPosition(Vector3i.ZERO);
+			playerActionPacket.setResultPosition(Vector3i.ZERO);
 
 			Client.instance.sendPacket(playerActionPacket);
 		} else if (packet.getAction() == ServerboundPlayerCommandPacket.Action.STOP_SPRINTING) {
@@ -28,6 +29,7 @@ public class ClientCommandC2SPacketTranslator extends PacketTranslator<Serverbou
 			playerActionPacket.setRuntimeEntityId(FunnelMC.mc.player.getId());
 			playerActionPacket.setAction(PlayerActionType.STOP_SPRINT);
 			playerActionPacket.setBlockPosition(Vector3i.ZERO);
+			playerActionPacket.setResultPosition(Vector3i.ZERO);
 
 			Client.instance.sendPacket(playerActionPacket);
 		}

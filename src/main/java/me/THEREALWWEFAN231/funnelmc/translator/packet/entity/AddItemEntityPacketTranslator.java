@@ -15,7 +15,10 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.phys.Vec3;
+
+import java.util.List;
 
 public class AddItemEntityPacketTranslator extends PacketTranslator<AddItemEntityPacket> {
 
@@ -41,8 +44,15 @@ public class AddItemEntityPacketTranslator extends PacketTranslator<AddItemEntit
 		ClientboundAddEntityPacket addEntityPacket = new ClientboundAddEntityPacket(id, itemEntity.getUUID(), x, y, z, 0, 0, itemEntityType, 0, new Vec3(motionX, motionY, motionZ), 0);
 		Client.instance.javaConnection.processServerToClientPacket(addEntityPacket);
 
-		ClientboundSetEntityDataPacket entityTrackerUpdateS2CPacket = new ClientboundSetEntityDataPacket(id, itemEntity.getEntityData().packDirty());
-		Client.instance.javaConnection.processServerToClientPacket(entityTrackerUpdateS2CPacket);
+		// packDirty() returns null (not an empty list) when nothing was actually marked dirty -
+		// e.g. an item stack that translates to the default (empty) value. ClientboundSetEntityDataPacket's
+		// own handler assumes a real server would only ever send one when there's something to pack,
+		// so it iterates the list with no null check.
+		List<SynchedEntityData.DataValue<?>> dirty = itemEntity.getEntityData().packDirty();
+		if (dirty != null) {
+			ClientboundSetEntityDataPacket entityTrackerUpdateS2CPacket = new ClientboundSetEntityDataPacket(id, dirty);
+			Client.instance.javaConnection.processServerToClientPacket(entityTrackerUpdateS2CPacket);
+		}
 	}
 
 	@Override

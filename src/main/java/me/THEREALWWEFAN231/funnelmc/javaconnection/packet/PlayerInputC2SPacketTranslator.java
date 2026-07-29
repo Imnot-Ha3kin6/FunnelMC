@@ -28,6 +28,7 @@ public class PlayerInputC2SPacketTranslator extends PacketTranslator<Serverbound
 		playerActionPacket.setRuntimeEntityId(FunnelMC.mc.player.getId());
 		playerActionPacket.setAction(shift ? PlayerActionType.START_SNEAK : PlayerActionType.STOP_SNEAK);
 		playerActionPacket.setBlockPosition(Vector3i.ZERO);
+		playerActionPacket.setResultPosition(Vector3i.ZERO);
 
 		Client.instance.sendPacket(playerActionPacket);
 	}

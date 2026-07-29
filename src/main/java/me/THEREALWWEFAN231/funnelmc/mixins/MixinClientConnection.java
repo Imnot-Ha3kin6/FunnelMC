@@ -60,12 +60,29 @@ public class MixinClientConnection {
 		}
 	}
 
-	@Inject(method = "disconnect", at = @At("HEAD"), cancellable = true)
+	@Inject(method = "disconnect(Lnet/minecraft/network/chat/Component;)V", at = @At("HEAD"), cancellable = true)
 	public void disconnect(Component disconnectReason, CallbackInfo ci) {
 		if (Client.instance.isConnectionOpen()) {
 			// this.channel is null here
 			Client.instance.bedrockSession.disconnect();
 			this.disconnectionDetails = new DisconnectionDetails(disconnectReason);
+			ci.cancel();
+		}
+	}
+
+	// Our isConnected() override above always reports "connected" while the bedrock session is
+	// open, even though this.channel is really null (there's no backing Netty channel for this
+	// fake connection). That's fine for the disconnect(Component) overload above since we cancel
+	// it outright, but disconnect(Component) itself just delegates to this DisconnectionDetails
+	// overload internally, and other vanilla code (e.g. ClientCommonPacketListenerImpl.onPacketError)
+	// calls this overload directly - so it needs the same guard, otherwise vanilla's own
+	// "if (this.isConnected()) this.channel.close()" sees our forced-true isConnected() and NPEs
+	// closing a channel that was never there.
+	@Inject(method = "disconnect(Lnet/minecraft/network/DisconnectionDetails;)V", at = @At("HEAD"), cancellable = true)
+	public void disconnect(DisconnectionDetails details, CallbackInfo ci) {
+		if (Client.instance.isConnectionOpen()) {
+			Client.instance.bedrockSession.disconnect();
+			this.disconnectionDetails = details;
 			ci.cancel();
 		}
 	}
