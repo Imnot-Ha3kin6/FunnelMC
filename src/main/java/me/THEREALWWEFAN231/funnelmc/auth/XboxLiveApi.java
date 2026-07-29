@@ -136,6 +136,25 @@ public class XboxLiveApi {
 		return activeXuids;
 	}
 
+	// Resolves a bare xuid to a human-readable gamertag, purely for diagnostics - turns "ownerXuid=
+	// 2535471507021567" in a log into an actual account name instead of something that has to be
+	// looked up by hand or guessed at.
+	private static String lookupGamertag(String xuid, String authorizationHeader) {
+		try {
+			JsonObject response = get("https://profile.xboxlive.com/users/xuid(" + xuid + ")/profile/settings?settings=Gamertag", authorizationHeader, "3");
+			JsonObject profileUser = response.getAsJsonArray("profileUsers").get(0).getAsJsonObject();
+			for (JsonElement settingElement : profileUser.getAsJsonArray("settings")) {
+				JsonObject setting = settingElement.getAsJsonObject();
+				if ("Gamertag".equals(setting.get("id").getAsString())) {
+					return setting.get("value").getAsString();
+				}
+			}
+			return "<no Gamertag setting in response>";
+		} catch (Exception e) {
+			return "<lookup failed: " + e.getMessage() + ">";
+		}
+	}
+
 	// Looks up the friend's active Minecraft session via MPSD and reads its connection info, if any.
 	public static JoinableSession findJoinableSession(String xuid, String authorizationHeader) throws Exception {
 		// A flat "xuid" query param plus a top-level "scid" in the body isn't what this endpoint
@@ -154,15 +173,6 @@ public class XboxLiveApi {
 		handleBody.addProperty("scid", MINECRAFT_SCID);
 		handleBody.addProperty("type", "activity");
 
-		// Asking for customProperties (not just relatedInfo) makes MPSD embed the session's own
-		// "properties" object directly inside each handle result - the same friends-visibility
-		// grant that lets handles/query find the handle at all is enough to read it that way.
-		// A separate GET straight to .../sessions/{name} enforces a *different*, stricter
-		// permission check (session membership / read-restriction), which is what was producing a
-		// live 403 ("must ... be a member of the session ... if the session ... has a read
-		// restriction") for a session whose owner isn't a mutual Xbox Live "friend" in the
-		// full sense, even though presence/activity-handle visibility still worked. Preferring the
-		// embedded document avoids that second, more restrictive call entirely.
 		JsonObject handleResponse = post("https://sessiondirectory.xboxlive.com/handles/query?include=relatedInfo,customProperties", authorizationHeader, MPSD_CONTRACT_VERSION, handleBody);
 
 		if (!handleResponse.has("results") || handleResponse.getAsJsonArray("results").isEmpty()) {
@@ -170,19 +180,29 @@ public class XboxLiveApi {
 			return null;
 		}
 
-		JsonObject handleResult = handleResponse.getAsJsonArray("results").get(0).getAsJsonObject();
+		JsonArray results = handleResponse.getAsJsonArray("results");
+		if (results.size() > 1) {
+			logger.warn("[FriendsDiag] handles/query for xuid={} returned {} activity handles (expected at most 1) - using the first one, but this may not be the session the caller actually meant", xuid, results.size());
+		}
+		JsonObject handleResult = results.get(0).getAsJsonObject();
 		JsonObject sessionRef = handleResult.getAsJsonObject("sessionRef");
 		String scid = sessionRef.get("scid").getAsString();
 		String templateName = sessionRef.get("templateName").getAsString();
 		String name = sessionRef.get("name").getAsString();
 
-		JsonObject session;
-		if (handleResult.has("properties")) {
-			logger.warn("[FriendsDiag] Using session properties embedded in handles/query result for {}/{}/{} (avoiding a separate, more restrictive GET)", scid, templateName, name);
-			session = handleResult;
-		} else {
-			session = get("https://sessiondirectory.xboxlive.com/serviceconfigs/" + scid + "/sessiontemplates/" + templateName + "/sessions/" + name, authorizationHeader, MPSD_CONTRACT_VERSION);
+		// The session "owner" (whoever's game client actually created the MPSD session) isn't
+		// necessarily the friend whose activity handle we looked up by - it's whoever's client
+		// currently holds that xuid's *most recent* published Xbox Live activity, which can go
+		// stale (e.g. a third-party relay/proxy session that was never cleanly left). Resolving it
+		// to a real gamertag turns "which account is this" from a guess into a fact the next 403
+		// (or success) can be read against.
+		if (handleResult.has("ownerXuid")) {
+			String ownerXuid = handleResult.get("ownerXuid").getAsString();
+			String ownerGamertag = lookupGamertag(ownerXuid, authorizationHeader);
+			logger.warn("[FriendsDiag] Session {}/{}/{} ownerXuid={} resolved to gamertag={}", scid, templateName, name, ownerXuid, ownerGamertag);
 		}
+
+		JsonObject session = get("https://sessiondirectory.xboxlive.com/serviceconfigs/" + scid + "/sessiontemplates/" + templateName + "/sessions/" + name, authorizationHeader, MPSD_CONTRACT_VERSION);
 
 		if (!session.has("properties")) {
 			logger.warn("[FriendsDiag] MPSD session {}/{}/{} has no 'properties'", scid, templateName, name);
