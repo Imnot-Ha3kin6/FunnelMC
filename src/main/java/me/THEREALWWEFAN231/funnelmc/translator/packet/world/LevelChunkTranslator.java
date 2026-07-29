@@ -91,7 +91,16 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 			}
 		}
 
-		LevelChunkSection[] chunkSections = new LevelChunkSection[16];
+		// Java's section array for a modern world doesn't start at Y=0 - a -64..320 world has
+		// getMinSectionY()=-4, so section index 0 holds Y=-64..-49. Bedrock's legacy subchunk
+		// numbering (versions 1/8) is still just "the Nth subchunk in this packet is bedrock
+		// section Y=N", implicitly assuming a world that starts at Y=0 - so every bedrock section
+		// has to be placed at (bedrockSectionY - minSectionY) in Java's array, not at its raw
+		// packet-order index. Version 9 (the extended-height format) sends an explicit signed
+		// section Y instead of relying on packet order at all, for the same reason: sections
+		// aren't guaranteed contiguous from 0 in a world with negative height.
+		int minSectionY = FunnelMC.mc.level.getMinSectionY();
+		LevelChunkSection[] chunkSections = new LevelChunkSection[FunnelMC.mc.level.getSectionsCount()];
 
 		ByteBuf byteBuf = Unpooled.buffer();
 		// ClientBatchHandler retains this before deferring us onto the main thread (see its comment) -
@@ -100,11 +109,20 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 		packet.getData().release();
 
 		for (int sectionIndex = 0; sectionIndex < packet.getSubChunksLength(); sectionIndex++) {
-			chunkSections[sectionIndex] = new LevelChunkSection(FunnelMC.mc.level.palettedContainerFactory());
 			int chunkVersion = byteBuf.readByte();
 
+			// Bedrock section Y defaults to the subchunk's position in the packet (versions 1/8,
+			// which predate negative height and always start at Y=0) - version 9 below overrides
+			// this with the real signed value it reads off the wire.
+			int sectionY = sectionIndex;
+
 			if (chunkVersion != 1 && chunkVersion != 8 && chunkVersion != 9) {
-				manage0VersionChunk(byteBuf, chunkSections[sectionIndex]);
+				int javaSectionIndex = sectionY - minSectionY;
+				LevelChunkSection legacySection = new LevelChunkSection(FunnelMC.mc.level.palettedContainerFactory());
+				manage0VersionChunk(byteBuf, legacySection);
+				if (javaSectionIndex >= 0 && javaSectionIndex < chunkSections.length) {
+					chunkSections[javaSectionIndex] = legacySection;
+				}
 				continue;
 			}
 
@@ -119,7 +137,13 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 			// skipped the storage-layer loop entirely, leaving that section's real data unconsumed
 			// and corrupting the read cursor for every section after it in the same packet.
 			if (chunkVersion == 9) {
-				byteBuf.readByte(); // section Y index - unused here, sectionIndex already tracks position
+				sectionY = byteBuf.readByte();
+			}
+
+			int javaSectionIndex = sectionY - minSectionY;
+			LevelChunkSection section = new LevelChunkSection(FunnelMC.mc.level.palettedContainerFactory());
+			if (javaSectionIndex >= 0 && javaSectionIndex < chunkSections.length) {
+				chunkSections[javaSectionIndex] = section;
 			}
 
 			for (int storageReadIndex = 0; storageReadIndex < storageSize; storageReadIndex++) {
@@ -146,7 +170,7 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 							for (int x = 0; x < 16; x++) {
 								for (int z = 0; z < 16; z++) {
 									for (int y = 0; y < 16; y++) {
-										chunkSections[sectionIndex].setBlockState(x, y, z, blockState);
+										section.setBlockState(x, y, z, blockState);
 									}
 								}
 							}
@@ -185,7 +209,7 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 									// setBlockState() requires a non-null state, so leave the position as its
 									// section default (air) instead of crashing the whole chunk translation.
 									if (blockState != null) {
-										chunkSections[sectionIndex].setBlockState(x, y, z, blockState);
+										section.setBlockState(x, y, z, blockState);
 									}
 								}
 								index++;
@@ -206,9 +230,9 @@ public class LevelChunkTranslator extends PacketTranslator<LevelChunkPacket> {
 
 		LevelChunk worldChunk = new LevelChunk(FunnelMC.mc.level, new ChunkPos(chunkX, chunkZ));
 
-		// TODO: modern worlds have a variable, negative-capable height range (e.g. -64..320, 24 sections)
-		// while this loop still assumes the legacy 0..255 / 16-section Bedrock layout, so translated
-		// chunks will render at the wrong Y offset until this is remapped against the real height range.
+		// chunkSections is already sized and indexed to match worldChunk's real height-shifted
+		// section array (see the javaSectionIndex computation above), so this is now a direct
+		// overlay rather than an assumption that both arrays start at the same Y.
 		LevelChunkSection[] sections = worldChunk.getSections();
 		for (int i = 0; i < sections.length && i < chunkSections.length; i++) {
 			if (chunkSections[i] != null) {
