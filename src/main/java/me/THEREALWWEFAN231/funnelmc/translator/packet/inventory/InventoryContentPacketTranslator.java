@@ -37,7 +37,9 @@ public class InventoryContentPacketTranslator extends PacketTranslator<Inventory
 				int javaSlotId = ScreenHandlerTranslatorManager.getJavaSlotFromBedrockContainer(FunnelMC.mc.player.containerMenu, containerAffected, i);
 
 				containerAffected.setItemBedrock(i, bedrockItemStack);
-				FunnelMC.mc.player.inventoryMenu.getSlot(javaSlotId).set(translatedStack);
+				if (javaSlotId != -1) {
+					FunnelMC.mc.player.inventoryMenu.getSlot(javaSlotId).set(translatedStack);
+				}
 			}
 
 			break;
