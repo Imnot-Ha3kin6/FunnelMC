@@ -1,5 +1,7 @@
 package me.THEREALWWEFAN231.funnelmc.javaconnection.packet.movement;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.cloudburstmc.math.vector.Vector2f;
 import org.cloudburstmc.math.vector.Vector3f;
 import org.cloudburstmc.protocol.bedrock.data.AuthoritativeMovementMode;
@@ -29,6 +31,8 @@ import java.util.Set;
 // reconciliation - so without them the server thinks we never pressed a key and keeps correcting us
 // back to a stationary position every tick.
 public class PlayerAuthInputSender {
+
+	private static final Logger logger = LogManager.getLogger(PlayerAuthInputSender.class);
 
 	private long tick;
 	private Vector3f lastSentPosition;
@@ -93,6 +97,10 @@ public class PlayerAuthInputSender {
 		if (input.sprint()) inputData.add(PlayerAuthInputData.SPRINTING);
 
 		Client.instance.sendPacket(packet);
+
+		if (this.tick % 20 == 0) {
+			logger.warn("[MovementDiag] sent tick={} pos={} moveVector={} inputData={}", this.tick, position, moveVector, inputData);
+		}
 	}
 
 }

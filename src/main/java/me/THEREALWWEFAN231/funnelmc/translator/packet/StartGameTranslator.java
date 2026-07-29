@@ -46,6 +46,7 @@ public class StartGameTranslator extends PacketTranslator<StartGamePacket> {
 		// itemDefinitions/blockDefinitions are set synchronously in ClientBatchHandler, not here -
 		// see its comment for why this deferred-to-main-thread translate() is too late for that.
 		Client.instance.movementMode = packet.getAuthoritativeMovementMode();
+		logger.warn("[MovementDiag] AuthoritativeMovementMode={}", Client.instance.movementMode);
 
 		int playerEntityId = (int) packet.getRuntimeEntityId();//not sure if we are suppose to use runtime id or unique id
 		lastRunTimeId = playerEntityId;
