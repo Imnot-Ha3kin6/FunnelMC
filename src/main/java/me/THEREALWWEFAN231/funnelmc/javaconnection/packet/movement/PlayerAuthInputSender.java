@@ -27,6 +27,7 @@ import net.minecraft.world.phys.Vec3;
 public class PlayerAuthInputSender {
 
 	private long tick;
+	private Vector3f lastSentPosition;
 
 	public PlayerAuthInputSender() {
 		EventManager.register(this);
@@ -44,16 +45,24 @@ public class PlayerAuthInputSender {
 
 		Vec3 lookAngle = FunnelMC.mc.player.getLookAngle();
 
+		Vector3f position = Vector3f.from(FunnelMC.mc.player.getX(), FunnelMC.mc.player.getY() + FunnelMC.mc.player.getEyeHeight(Pose.STANDING), FunnelMC.mc.player.getZ());
+
+		// Server-authoritative movement won't actually move the player server-side off of position
+		// alone - it needs a non-zero delta each tick to accept the move, or it just keeps echoing
+		// back the last confirmed position (which MovePlayerPacketTranslator then snaps us back to).
+		Vector3f delta = this.lastSentPosition == null ? Vector3f.ZERO : position.sub(this.lastSentPosition);
+		this.lastSentPosition = position;
+
 		PlayerAuthInputPacket packet = new PlayerAuthInputPacket();
-		packet.setPosition(Vector3f.from(FunnelMC.mc.player.getX(), FunnelMC.mc.player.getY() + FunnelMC.mc.player.getEyeHeight(Pose.STANDING), FunnelMC.mc.player.getZ()));
+		packet.setPosition(position);
 		packet.setRotation(Vector3f.from(FunnelMC.mc.player.getXRot(), FunnelMC.mc.player.getYRot(), FunnelMC.mc.player.getYRot()));
-		packet.setMotion(Vector2f.ZERO);
+		packet.setMotion(Vector2f.from(delta.getX(), delta.getZ()));
 		packet.setInputMode(InputMode.MOUSE);
 		packet.setPlayMode(ClientPlayMode.NORMAL);
 		packet.setInputInteractionModel(InputInteractionModel.CLASSIC);
 		packet.setInteractRotation(Vector2f.ZERO);
 		packet.setTick(this.tick++);
-		packet.setDelta(Vector3f.ZERO);
+		packet.setDelta(delta);
 		packet.setAnalogMoveVector(Vector2f.ZERO);
 		packet.setCameraOrientation(Vector3f.from((float) lookAngle.x, (float) lookAngle.y, (float) lookAngle.z));
 		packet.setRawMoveVector(Vector2f.ZERO);
