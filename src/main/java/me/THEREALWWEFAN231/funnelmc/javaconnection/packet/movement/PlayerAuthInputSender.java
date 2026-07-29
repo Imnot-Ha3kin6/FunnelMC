@@ -17,8 +17,10 @@ import com.darkmagician6.eventapi.EventTarget;
 import me.THEREALWWEFAN231.funnelmc.FunnelMC;
 import me.THEREALWWEFAN231.funnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.funnelmc.events.EventPlayerTick;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Input;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.Set;
@@ -99,7 +101,10 @@ public class PlayerAuthInputSender {
 		Client.instance.sendPacket(packet);
 
 		if (this.tick % 20 == 0) {
-			logger.warn("[MovementDiag] sent tick={} pos={} moveVector={} inputData={}", this.tick, position, moveVector, inputData);
+			BlockPos below = FunnelMC.mc.player.blockPosition().below();
+			BlockState belowState = FunnelMC.mc.level != null ? FunnelMC.mc.level.getBlockState(below) : null;
+			logger.warn("[MovementDiag] sent tick={} pos={} moveVector={} inputData={} onGround={} blockBelow={}={}",
+					this.tick, position, moveVector, inputData, FunnelMC.mc.player.onGround(), below, belowState);
 		}
 	}
 
