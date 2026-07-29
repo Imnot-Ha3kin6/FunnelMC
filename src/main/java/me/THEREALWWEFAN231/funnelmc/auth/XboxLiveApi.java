@@ -7,6 +7,9 @@ import java.util.List;
 
 import javax.net.ssl.HttpsURLConnection;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -32,6 +35,8 @@ import me.THEREALWWEFAN231.funnelmc.FunnelMC;
  * is the one part of this feature that couldn't be tested without a real Xbox Live login.
  */
 public class XboxLiveApi {
+
+	private static final Logger logger = LogManager.getLogger(XboxLiveApi.class);
 
 	private static final String MINECRAFT_TITLE_ID = "896928775"; // same constant Auth#getOfflineChainData already uses
 	private static final String MINECRAFT_SCID = "4fc10100-5f7a-4470-899b-280835760c07";
@@ -65,6 +70,7 @@ public class XboxLiveApi {
 			JsonObject person = element.getAsJsonObject();
 			friends.add(new Friend(person.get("xuid").getAsString(), person.get("gamertag").getAsString()));
 		}
+		logger.warn("[FriendsDiag] getFriends found {} friend(s): {}", friends.size(), friends.stream().map(f -> f.gamertag).toList());
 		return friends;
 	}
 
@@ -82,11 +88,15 @@ public class XboxLiveApi {
 		body.addProperty("level", "all");
 
 		JsonArray response = postForArray("https://userpresence.xboxlive.com/users/batch", authorizationHeader, "3", body);
+		logger.warn("[FriendsDiag] userpresence batch raw response: {}", response);
 
 		List<String> activeXuids = new ArrayList<>();
 		for (JsonElement element : response) {
 			JsonObject presenceItem = element.getAsJsonObject();
+			String presenceXuid = presenceItem.has("xuid") ? presenceItem.get("xuid").getAsString() : "?";
+			String presenceState = presenceItem.has("state") ? presenceItem.get("state").getAsString() : "?";
 			if (!presenceItem.has("devices")) {
+				logger.warn("[FriendsDiag] xuid={} state={} has no 'devices' entry at all", presenceXuid, presenceState);
 				continue;
 			}
 			for (JsonElement deviceElement : presenceItem.getAsJsonArray("devices")) {
@@ -96,10 +106,15 @@ public class XboxLiveApi {
 				}
 				for (JsonElement titleElement : device.getAsJsonArray("titles")) {
 					JsonObject title = titleElement.getAsJsonObject();
+					String titleId = title.has("id") ? title.get("id").getAsString() : "?";
+					String titleState = title.has("state") ? title.get("state").getAsString() : "?";
+					String titleName = title.has("name") ? title.get("name").getAsString() : "?";
+					logger.warn("[FriendsDiag] xuid={} presenceState={} title id={} name={} state={} (expecting id={})",
+							presenceXuid, presenceState, titleId, titleName, titleState, MINECRAFT_TITLE_ID);
 					if (title.has("id") && title.has("state")
 							&& MINECRAFT_TITLE_ID.equals(title.get("id").getAsString())
 							&& "Active".equals(title.get("state").getAsString())) {
-						activeXuids.add(presenceItem.get("xuid").getAsString());
+						activeXuids.add(presenceXuid);
 					}
 				}
 			}
@@ -116,6 +131,7 @@ public class XboxLiveApi {
 		JsonObject handleResponse = post("https://sessiondirectory.xboxlive.com/handles/query?include=relatedInfo&xuid=" + xuid, authorizationHeader, MPSD_CONTRACT_VERSION, handleBody);
 
 		if (!handleResponse.has("results") || handleResponse.getAsJsonArray("results").isEmpty()) {
+			logger.warn("[FriendsDiag] handles/query for xuid={} returned no results - not in an activity handle for scid={}", xuid, MINECRAFT_SCID);
 			return null;
 		}
 
@@ -127,14 +143,17 @@ public class XboxLiveApi {
 		JsonObject session = get("https://sessiondirectory.xboxlive.com/serviceconfigs/" + scid + "/sessiontemplates/" + templateName + "/sessions/" + name, authorizationHeader, MPSD_CONTRACT_VERSION);
 
 		if (!session.has("properties")) {
+			logger.warn("[FriendsDiag] MPSD session {}/{}/{} has no 'properties'", scid, templateName, name);
 			return null;
 		}
 		JsonObject properties = session.getAsJsonObject("properties");
 		if (!properties.has("custom")) {
+			logger.warn("[FriendsDiag] MPSD session {}/{}/{} properties has no 'custom'", scid, templateName, name);
 			return null;
 		}
 		JsonObject custom = properties.getAsJsonObject("custom");
 		if (!custom.has("SupportedConnections") || custom.getAsJsonArray("SupportedConnections").isEmpty()) {
+			logger.warn("[FriendsDiag] MPSD session {}/{}/{} custom has no/empty 'SupportedConnections': {}", scid, templateName, name, custom);
 			return null;
 		}
 
@@ -149,20 +168,40 @@ public class XboxLiveApi {
 		connection.setRequestProperty("x-xbl-contract-version", contractVersion);
 		connection.setRequestProperty("Accept-Language", "en-US");
 
-		String responseText = FunnelMC.instance.fileManagement.getTextFromInputStream(connection.getInputStream());
+		String responseText = readResponseOrThrow(connection, url);
 		return FunnelMC.instance.fileManagement.jsonParser.parse(responseText).getAsJsonObject();
 	}
 
 	private static JsonObject post(String url, String authorizationHeader, String contractVersion, JsonObject body) throws Exception {
 		HttpsURLConnection connection = openPost(url, authorizationHeader, contractVersion, body);
-		String responseText = FunnelMC.instance.fileManagement.getTextFromInputStream(connection.getInputStream());
+		String responseText = readResponseOrThrow(connection, url);
 		return FunnelMC.instance.fileManagement.jsonParser.parse(responseText).getAsJsonObject();
 	}
 
 	private static JsonArray postForArray(String url, String authorizationHeader, String contractVersion, JsonObject body) throws Exception {
 		HttpsURLConnection connection = openPost(url, authorizationHeader, contractVersion, body);
-		String responseText = FunnelMC.instance.fileManagement.getTextFromInputStream(connection.getInputStream());
+		String responseText = readResponseOrThrow(connection, url);
 		return FunnelMC.instance.fileManagement.jsonParser.parse(responseText).getAsJsonArray();
+	}
+
+	// HttpsURLConnection#getInputStream() throws for any non-2xx status *without* exposing the
+	// response body at all (that only lives on getErrorStream()) - so a 401/403 from a subtly wrong
+	// token scope, or a 400 from a malformed request, was previously surfacing as a bare
+	// "Server returned HTTP response code: ..." IOException with no way to tell what Xbox Live
+	// actually objected to. Read the error body on failure so it shows up in the log instead.
+	private static String readResponseOrThrow(HttpsURLConnection connection, String url) throws Exception {
+		int status = connection.getResponseCode();
+		if (status >= 200 && status < 300) {
+			String body = FunnelMC.instance.fileManagement.getTextFromInputStream(connection.getInputStream());
+			logger.warn("[FriendsDiag] {} {} -> {} body={}", connection.getRequestMethod(), url, status, body);
+			return body;
+		}
+
+		String errorBody = connection.getErrorStream() != null
+				? FunnelMC.instance.fileManagement.getTextFromInputStream(connection.getErrorStream())
+				: "(no error body)";
+		logger.warn("[FriendsDiag] {} {} -> {} errorBody={}", connection.getRequestMethod(), url, status, errorBody);
+		throw new Exception(connection.getRequestMethod() + " " + url + " failed with HTTP " + status + ": " + errorBody);
 	}
 
 	private static HttpsURLConnection openPost(String url, String authorizationHeader, String contractVersion, JsonObject body) throws Exception {

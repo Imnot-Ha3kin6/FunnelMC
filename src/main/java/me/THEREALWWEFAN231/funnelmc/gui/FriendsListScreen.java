@@ -3,6 +3,9 @@ package me.THEREALWWEFAN231.funnelmc.gui;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -22,6 +25,8 @@ import me.THEREALWWEFAN231.funnelmc.bedrockconnection.Client;
 // that's the most likely place something's still off.
 @Environment(EnvType.CLIENT)
 public class FriendsListScreen extends Screen {
+
+	private static final Logger logger = LogManager.getLogger(FriendsListScreen.class);
 
 	private final Screen parent;
 	private String statusLine = "Looking for friends playing Minecraft...";
@@ -67,7 +72,7 @@ public class FriendsListScreen extends Screen {
 
 				this.minecraft.execute(() -> this.showFriends(activeFriends));
 			} catch (Exception e) {
-				e.printStackTrace();
+				logger.error("[FriendsDiag] Failed to load friends", e);
 				this.minecraft.execute(() -> this.statusLine = "Failed to load friends: " + e.getMessage());
 			}
 		}, "FunnelMC-Friends-Load").start();
@@ -104,7 +109,7 @@ public class FriendsListScreen extends Screen {
 
 				this.minecraft.execute(() -> Client.instance.connectWithExistingAuth(session.hostIp, session.hostPort, Client.instance.cachedAuth, Client.instance.cachedOnlineChainData));
 			} catch (Exception e) {
-				e.printStackTrace();
+				logger.error("[FriendsDiag] Couldn't join {}", friend.gamertag, e);
 				this.minecraft.execute(() -> this.statusLine = "Couldn't join " + friend.gamertag + ": " + e.getMessage());
 			}
 		}, "FunnelMC-Friends-Join").start();
