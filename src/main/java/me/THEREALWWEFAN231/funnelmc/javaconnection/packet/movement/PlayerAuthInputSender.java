@@ -6,6 +6,7 @@ import org.cloudburstmc.protocol.bedrock.data.AuthoritativeMovementMode;
 import org.cloudburstmc.protocol.bedrock.data.ClientPlayMode;
 import org.cloudburstmc.protocol.bedrock.data.InputInteractionModel;
 import org.cloudburstmc.protocol.bedrock.data.InputMode;
+import org.cloudburstmc.protocol.bedrock.data.PlayerAuthInputData;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerAuthInputPacket;
 
 import com.darkmagician6.eventapi.EventManager;
@@ -15,15 +16,18 @@ import me.THEREALWWEFAN231.funnelmc.FunnelMC;
 import me.THEREALWWEFAN231.funnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.funnelmc.events.EventPlayerTick;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.phys.Vec3;
+
+import java.util.Set;
 
 // Servers running server-authoritative movement (most current ones, including the vanilla Bedrock
 // Dedicated Server by default) expect PlayerAuthInputPacket every tick instead of the legacy
 // client-authoritative MovePlayerPacket (which they reject outright - see the movementMode guard in
-// PlayerMoveTranslator). This only reports position/rotation - sprint/sneak/jump input flags,
-// analog move axes, and delta/motion prediction aren't tracked yet, so server-side movement
-// prediction won't be as smooth as a real Bedrock client, but it's enough to stop the server from
-// disconnecting us for sending a packet it won't accept.
+// PlayerMoveTranslator). Real server-authoritative movement simulates the player from the analog
+// move vector and input flags below, not from the reported position/delta - those are only used for
+// reconciliation - so without them the server thinks we never pressed a key and keeps correcting us
+// back to a stationary position every tick.
 public class PlayerAuthInputSender {
 
 	private long tick;
@@ -53,6 +57,11 @@ public class PlayerAuthInputSender {
 		Vector3f delta = this.lastSentPosition == null ? Vector3f.ZERO : position.sub(this.lastSentPosition);
 		this.lastSentPosition = position;
 
+		Input input = FunnelMC.mc.player.getLastSentInput();
+		float forwardValue = (input.forward() ? 1f : 0f) - (input.backward() ? 1f : 0f);
+		float strafeValue = (input.right() ? 1f : 0f) - (input.left() ? 1f : 0f);
+		Vector2f moveVector = Vector2f.from(strafeValue, forwardValue);
+
 		PlayerAuthInputPacket packet = new PlayerAuthInputPacket();
 		packet.setPosition(position);
 		packet.setRotation(Vector3f.from(FunnelMC.mc.player.getXRot(), FunnelMC.mc.player.getYRot(), FunnelMC.mc.player.getYRot()));
@@ -63,9 +72,21 @@ public class PlayerAuthInputSender {
 		packet.setInteractRotation(Vector2f.ZERO);
 		packet.setTick(this.tick++);
 		packet.setDelta(delta);
-		packet.setAnalogMoveVector(Vector2f.ZERO);
+		packet.setAnalogMoveVector(moveVector);
 		packet.setCameraOrientation(Vector3f.from((float) lookAngle.x, (float) lookAngle.y, (float) lookAngle.z));
-		packet.setRawMoveVector(Vector2f.ZERO);
+		packet.setRawMoveVector(moveVector);
+
+		Set<PlayerAuthInputData> inputData = packet.getInputData();
+		if (input.forward()) inputData.add(PlayerAuthInputData.UP);
+		if (input.backward()) inputData.add(PlayerAuthInputData.DOWN);
+		if (input.left()) inputData.add(PlayerAuthInputData.LEFT);
+		if (input.right()) inputData.add(PlayerAuthInputData.RIGHT);
+		if (input.jump()) inputData.add(PlayerAuthInputData.JUMPING);
+		if (input.shift()) {
+			inputData.add(PlayerAuthInputData.SNEAKING);
+			inputData.add(PlayerAuthInputData.SNEAK_DOWN);
+		}
+		if (input.sprint()) inputData.add(PlayerAuthInputData.SPRINTING);
 
 		Client.instance.sendPacket(packet);
 	}
