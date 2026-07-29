@@ -133,17 +133,31 @@ public class FriendsListScreen extends Screen {
 		}, "FunnelMC-Friends-Join").start();
 	}
 
+	// The hostname pattern is "wss://signaling-tm-<region>.franchise.minecraft-services.net" - the
+	// "-tm-" strongly suggests Azure Traffic Manager, which picks a region per-connection rather
+	// than per-account. A live probe showed our own client landing on "mexicocentral" on one attempt
+	// and "eastus2" on another (same machine, minutes apart) - the friend's own client independently
+	// got routed to whichever region it saw fit when it started hosting, with no guarantee it matches
+	// ours. When it doesn't, that region's signaling server has never heard of the friend's network
+	// ID and bounces every message with "Player not found" - not a bug in what we send, just the
+	// wrong regional server. Full list from the "qos-beacons" section of the Discovery response.
+	private static final List<String> SIGNALING_REGIONS = List.of(
+			"eastus2", "mexicocentral", // observed in live probes - tried first
+			"australiaEast", "australiaSoutheast", "brazilSouth", "canadaCentral", "centralIndia",
+			"centralUs", "eastAsia", "eastUs", "franceCentral", "japanEast", "japanWest",
+			"koreaCentral", "northCentralUs", "northEurope", "southAfricaNorth", "southCentralUs",
+			"southeastAsia", "swedenCentral", "uaeNorth", "ukSouth", "westCentralUs", "westEurope",
+			"westUs", "westUs2", "westUs3");
+
 	// This world can only be reached over NetherNet (WebRTC). The auth chain (Xbox Live -> PlayFab
-	// -> franchise MCToken -> signaling websocket -> real STUN/TURN Credentials) was already proven
-	// working end to end in an earlier build. This drives the actual WebRTC negotiation on top of
-	// it: open a persistent signaling connection, wait for Credentials, then have NetherNetTransport
-	// create the data channels, send our SDP offer, and apply the remote's answer/ICE candidates as
-	// they arrive. Success here means the data channel reaches OPEN - actually routing Bedrock
-	// packets over it (replacing the RakNet/UDP pipeline for this connection) is the next step.
+	// -> franchise MCToken -> real STUN/TURN Credentials) was already proven working end to end in
+	// an earlier build - that part doesn't depend on region, so it's only done once here. What does
+	// depend on region is the signaling websocket itself (see SIGNALING_REGIONS above), so this
+	// tries each region in turn: open a persistent signaling connection there, wait for Credentials,
+	// have NetherNetTransport create the data channels, send our SDP offer, and give it a few
+	// seconds to either reach a real answer or bounce with "Player not found" before moving on.
 	private void probeNetherNet(XboxLiveApi.Friend friend, long netherNetId) {
 		new Thread(() -> {
-			SignalingConnection signaling = null;
-			NetherNetTransport transport = null;
 			try {
 				String gameVersion = Client.instance.bedrockCodec.getMinecraftVersion();
 				logger.warn("[NetherNetDiag] Starting probe for {}'s session (netherNetId={}, gameVersion={})", friend.gamertag, netherNetId, gameVersion);
@@ -152,59 +166,79 @@ public class FriendsListScreen extends Screen {
 				String playFabXboxToken = Client.instance.cachedAuth.getXboxTokenForRelyingParty("rp://playfabapi.com/");
 				PlayFabAuth.LoginResult playFabLogin = PlayFabAuth.login(discovery.auth.playFabTitleId, playFabXboxToken);
 				FranchiseAuth.Token mcToken = FranchiseAuth.startSession(discovery.auth.serviceUri, discovery.auth.playFabTitleId, playFabLogin.sessionTicket, gameVersion);
-				logger.warn("[NetherNetDiag] Auth chain ready, opening signaling connection");
+				logger.warn("[NetherNetDiag] Auth chain ready, trying {} signaling regions", SIGNALING_REGIONS.size());
 
-				String targetNetworkId = Long.toUnsignedString(netherNetId);
-				AtomicReference<NetherNetTransport> transportRef = new AtomicReference<>();
+				for (String region : SIGNALING_REGIONS) {
+					String signalingUri = "wss://signaling-tm-" + region + ".franchise.minecraft-services.net";
+					this.minecraft.execute(() -> this.statusLine = "Trying " + region + " for " + friend.gamertag + "'s world (see funnelmc.log)...");
 
-				signaling = SignalingConnection.connect(discovery.signaling.serviceUri, mcToken.authorizationHeader, new SignalingConnection.Listener() {
-					@Override
-					public void onCredentials(String credentialsJson) {
-						logger.warn("[NetherNetDiag] Signaling credentials received");
+					if (this.attemptNetherNetJoin(signalingUri, mcToken.authorizationHeader, netherNetId, friend)) {
+						return;
 					}
+				}
 
-					@Override
-					public void onSignal(NetherNetSignal signal, String fromNetworkId) {
-						NetherNetTransport t = transportRef.get();
-						if (t != null && targetNetworkId.equals(fromNetworkId)) {
-							t.handleSignal(signal);
-						} else {
-							logger.warn("[NetherNetDiag] Ignoring signal from unexpected/unready source: from={} type={}", fromNetworkId, signal.type);
-						}
-					}
-
-					@Override
-					public void onClosed(int statusCode, String reason) {
-						logger.warn("[NetherNetDiag] Signaling connection closed: {} {}", statusCode, reason);
-					}
-				});
-
-				String credentialsJson = signaling.awaitCredentials(15);
-
-				transport = new NetherNetTransport(signaling, netherNetId, credentialsJson);
-				transportRef.set(transport);
-				transport.connect();
-
-				this.minecraft.execute(() -> this.statusLine = "Negotiating WebRTC connection to " + friend.gamertag + "'s world (see funnelmc.log)...");
-
-				transport.whenDataChannelOpen().get(20, TimeUnit.SECONDS);
-				logger.warn("[NetherNetDiag] Data channel OPEN - WebRTC transport is fully connected!");
-				this.minecraft.execute(() -> this.statusLine = "NetherNet data channel connected! (packet pipeline not wired up yet - see funnelmc.log)");
+				this.minecraft.execute(() -> this.statusLine = "Couldn't reach " + friend.gamertag + "'s world on any known NetherNet signaling region.");
 			} catch (Exception e) {
 				logger.error("[NetherNetDiag] Probe failed", e);
-				final SignalingConnection signalingToClose = signaling;
-				final NetherNetTransport transportToClose = transport;
-				this.minecraft.execute(() -> {
-					this.statusLine = "NetherNet probe failed: " + e.getMessage();
-					if (transportToClose != null) {
-						transportToClose.close();
-					}
-					if (signalingToClose != null) {
-						signalingToClose.close();
-					}
-				});
+				this.minecraft.execute(() -> this.statusLine = "NetherNet probe failed: " + e.getMessage());
 			}
 		}, "FunnelMC-NetherNet-Probe").start();
+	}
+
+	// Returns true once the data channel reaches OPEN via this specific signaling region. Actually
+	// routing Bedrock packets over it (replacing the RakNet/UDP pipeline for this connection) is
+	// still the next piece of work - reaching OPEN here only proves the WebRTC transport itself.
+	private boolean attemptNetherNetJoin(String signalingUri, String authorizationHeader, long netherNetId, XboxLiveApi.Friend friend) {
+		logger.warn("[NetherNetDiag] Trying signaling region {}", signalingUri);
+
+		String targetNetworkId = Long.toUnsignedString(netherNetId);
+		AtomicReference<NetherNetTransport> transportRef = new AtomicReference<>();
+		SignalingConnection signaling;
+
+		try {
+			signaling = SignalingConnection.connect(signalingUri, authorizationHeader, new SignalingConnection.Listener() {
+				@Override
+				public void onCredentials(String credentialsJson) {
+				}
+
+				@Override
+				public void onSignal(NetherNetSignal signal, String fromNetworkId) {
+					NetherNetTransport t = transportRef.get();
+					if (t != null && targetNetworkId.equals(fromNetworkId)) {
+						t.handleSignal(signal);
+					}
+				}
+
+				@Override
+				public void onClosed(int statusCode, String reason) {
+				}
+			});
+		} catch (Exception e) {
+			logger.warn("[NetherNetDiag] Region {} - couldn't open signaling connection: {}", signalingUri, e.getMessage());
+			return false;
+		}
+
+		NetherNetTransport transport = null;
+		try {
+			String credentialsJson = signaling.awaitCredentials(15);
+
+			transport = new NetherNetTransport(signaling, netherNetId, credentialsJson);
+			transportRef.set(transport);
+			transport.connect();
+
+			transport.whenDataChannelOpen().get(8, TimeUnit.SECONDS);
+			logger.warn("[NetherNetDiag] Data channel OPEN via {} - WebRTC transport is fully connected!", signalingUri);
+			this.minecraft.execute(() -> this.statusLine = "NetherNet data channel connected via " + signalingUri + "! (packet pipeline not wired up yet - see funnelmc.log)");
+			return true;
+		} catch (Exception e) {
+			logger.warn("[NetherNetDiag] Region {} did not connect: {}", signalingUri, e.getMessage());
+			return false;
+		} finally {
+			if (transport != null) {
+				transport.close();
+			}
+			signaling.close();
+		}
 	}
 
 	@Override
