@@ -128,11 +128,23 @@ public class XboxLiveApi {
 
 	// Looks up the friend's active Minecraft session via MPSD and reads its connection info, if any.
 	public static JoinableSession findJoinableSession(String xuid, String authorizationHeader) throws Exception {
-		JsonObject handleBody = new JsonObject();
-		handleBody.addProperty("type", "activity");
-		handleBody.addProperty("scid", MINECRAFT_SCID);
+		// A flat "xuid" query param plus a top-level "scid" in the body isn't what this endpoint
+		// expects - confirmed by a live 400 ("'scid', 'templateName', and 'sessionName' must be
+		// specified") from a real account. Verified against jrcarl624/FriendConnect's queryHandles:
+		// the owner has to be identified via a nested owners.people.monikerXuid object in the body,
+		// not a query string parameter.
+		JsonObject owners = new JsonObject();
+		JsonObject people = new JsonObject();
+		people.addProperty("moniker", "people");
+		people.addProperty("monikerXuid", xuid);
+		owners.add("people", people);
 
-		JsonObject handleResponse = post("https://sessiondirectory.xboxlive.com/handles/query?include=relatedInfo&xuid=" + xuid, authorizationHeader, MPSD_CONTRACT_VERSION, handleBody);
+		JsonObject handleBody = new JsonObject();
+		handleBody.add("owners", owners);
+		handleBody.addProperty("scid", MINECRAFT_SCID);
+		handleBody.addProperty("type", "activity");
+
+		JsonObject handleResponse = post("https://sessiondirectory.xboxlive.com/handles/query?include=relatedInfo", authorizationHeader, MPSD_CONTRACT_VERSION, handleBody);
 
 		if (!handleResponse.has("results") || handleResponse.getAsJsonArray("results").isEmpty()) {
 			logger.warn("[FriendsDiag] handles/query for xuid={} returned no results - not in an activity handle for scid={}", xuid, MINECRAFT_SCID);
