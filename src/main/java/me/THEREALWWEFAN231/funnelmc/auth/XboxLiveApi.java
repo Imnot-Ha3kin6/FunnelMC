@@ -38,7 +38,6 @@ public class XboxLiveApi {
 
 	private static final Logger logger = LogManager.getLogger(XboxLiveApi.class);
 
-	private static final String MINECRAFT_TITLE_ID = "896928775"; // same constant Auth#getOfflineChainData already uses
 	private static final String MINECRAFT_SCID = "4fc10100-5f7a-4470-899b-280835760c07";
 	private static final String MPSD_CONTRACT_VERSION = "107";
 
@@ -109,10 +108,15 @@ public class XboxLiveApi {
 					String titleId = title.has("id") ? title.get("id").getAsString() : "?";
 					String titleState = title.has("state") ? title.get("state").getAsString() : "?";
 					String titleName = title.has("name") ? title.get("name").getAsString() : "?";
-					logger.warn("[FriendsDiag] xuid={} presenceState={} title id={} name={} state={} (expecting id={})",
-							presenceXuid, presenceState, titleId, titleName, titleState, MINECRAFT_TITLE_ID);
-					if (title.has("id") && title.has("state")
-							&& MINECRAFT_TITLE_ID.equals(title.get("id").getAsString())
+					logger.warn("[FriendsDiag] xuid={} presenceState={} title id={} name={} state={}",
+							presenceXuid, presenceState, titleId, titleName, titleState);
+					// Minecraft's title ID differs per platform (Xbox/Windows use 896928775, but a
+					// friend on iOS reported 1810924247 in a live FriendsDiag log) - matching on a
+					// single hardcoded ID was never going to work across platforms. "name" is the
+					// same human-readable "Minecraft" string regardless of platform, so match on
+					// that instead.
+					if (title.has("name") && title.has("state")
+							&& "Minecraft".equalsIgnoreCase(title.get("name").getAsString())
 							&& "Active".equals(title.get("state").getAsString())) {
 						activeXuids.add(presenceXuid);
 					}
