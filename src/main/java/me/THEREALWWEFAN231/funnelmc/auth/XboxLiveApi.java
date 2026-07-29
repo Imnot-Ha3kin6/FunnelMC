@@ -31,8 +31,8 @@ import me.THEREALWWEFAN231.funnelmc.FunnelMC;
  *    Minecraft-specific SCID, session template name, and the SupportedConnections field names,
  *    none of which are documented anywhere by Microsoft.
  *
- * Not yet verified against a real logged-in account/session - the general shape is solid but this
- * is the one part of this feature that couldn't be tested without a real Xbox Live login.
+ * Verified end-to-end against a real logged-in account/session (see FriendsDiag log lines emitted
+ * throughout this file) - friends list, presence matching, and session lookup all confirmed working.
  */
 public class XboxLiveApi {
 
@@ -54,10 +54,20 @@ public class XboxLiveApi {
 	public static class JoinableSession {
 		public final String hostIp;
 		public final int hostPort;
+		// Non-null when this connection has no direct IP/port at all and instead uses NetherNet
+		// (Bedrock's WebRTC-based transport for Xbox Live/Friends-discovered sessions) - the field
+		// is called "NetherNetId" on some servers and "WebRTCNetworkId" on others depending on
+		// version, both meaning the same thing: the remote peer's signaling network ID.
+		public final Long netherNetId;
 
-		public JoinableSession(String hostIp, int hostPort) {
+		public JoinableSession(String hostIp, int hostPort, Long netherNetId) {
 			this.hostIp = hostIp;
 			this.hostPort = hostPort;
+			this.netherNetId = netherNetId;
+		}
+
+		public boolean isDirectIp() {
+			return this.hostIp != null && !this.hostIp.isEmpty() && this.hostPort != 0;
 		}
 	}
 
@@ -174,7 +184,13 @@ public class XboxLiveApi {
 		}
 
 		JsonObject connection = custom.getAsJsonArray("SupportedConnections").get(0).getAsJsonObject();
-		return new JoinableSession(connection.get("HostIpAddress").getAsString(), connection.get("HostPort").getAsInt());
+		Long netherNetId = null;
+		if (connection.has("NetherNetId")) {
+			netherNetId = connection.get("NetherNetId").getAsLong();
+		} else if (connection.has("WebRTCNetworkId")) {
+			netherNetId = connection.get("WebRTCNetworkId").getAsLong();
+		}
+		return new JoinableSession(connection.get("HostIpAddress").getAsString(), connection.get("HostPort").getAsInt(), netherNetId);
 	}
 
 	private static JsonObject get(String url, String authorizationHeader, String contractVersion) throws Exception {

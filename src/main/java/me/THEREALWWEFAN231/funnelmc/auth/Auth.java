@@ -123,7 +123,15 @@ public class Auth {
 	// user/device/title tokens obtained by getOnlineChainData() rather than redoing that exchange.
 	// Must be called after getOnlineChainData().
 	public String getXboxLiveAuthorizationHeader() throws Exception {
-		String xsts = this.xbox.getXstsToken(this.userToken, this.deviceToken, this.titleToken, this.xboxLiveKeyPublicKey, this.xboxLiveKeyPrivateKey, "http://xboxlive.com");
+		return this.getXboxTokenForRelyingParty("http://xboxlive.com");
+	}
+
+	// Same idea as getXboxLiveAuthorizationHeader(), but for an arbitrary relying party - needed for
+	// PlayFab login (NetherNet's MCToken chain), which requires an XSTS token scoped specifically to
+	// "rp://playfabapi.com/" rather than the general Xbox Live one. Must be called after
+	// getOnlineChainData().
+	public String getXboxTokenForRelyingParty(String relyingParty) throws Exception {
+		String xsts = this.xbox.getXstsToken(this.userToken, this.deviceToken, this.titleToken, this.xboxLiveKeyPublicKey, this.xboxLiveKeyPrivateKey, relyingParty);
 		return Xbox.buildAuthorizationHeader(xsts);
 	}
 
