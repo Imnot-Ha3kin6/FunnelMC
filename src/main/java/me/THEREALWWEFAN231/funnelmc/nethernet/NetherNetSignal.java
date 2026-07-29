@@ -23,7 +23,12 @@ public class NetherNetSignal {
 	}
 
 	public String encode() {
-		return this.type + " " + this.connectionId + " " + this.data;
+		// connectionId is a genuine unsigned 64-bit value - plain "+" concatenation would use
+		// Long's signed toString() and print a "-" for anything with the high bit set, producing a
+		// wire string the remote can't parse back. Only matters once a foreign (non-masked)
+		// connection ID ever flows through here, but it's wrong regardless of whether that's
+		// happened yet.
+		return this.type + " " + Long.toUnsignedString(this.connectionId) + " " + this.data;
 	}
 
 	public static NetherNetSignal decode(String text) {
