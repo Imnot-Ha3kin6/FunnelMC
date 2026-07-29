@@ -2,6 +2,8 @@ package me.THEREALWWEFAN231.funnelmc.gui;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -18,8 +20,10 @@ import me.THEREALWWEFAN231.funnelmc.auth.XboxLiveApi;
 import me.THEREALWWEFAN231.funnelmc.bedrockconnection.Client;
 import me.THEREALWWEFAN231.funnelmc.nethernet.FranchiseAuth;
 import me.THEREALWWEFAN231.funnelmc.nethernet.NetherNetDiscovery;
+import me.THEREALWWEFAN231.funnelmc.nethernet.NetherNetSignal;
+import me.THEREALWWEFAN231.funnelmc.nethernet.NetherNetTransport;
 import me.THEREALWWEFAN231.funnelmc.nethernet.PlayFabAuth;
-import me.THEREALWWEFAN231.funnelmc.nethernet.SignalingClient;
+import me.THEREALWWEFAN231.funnelmc.nethernet.SignalingConnection;
 
 // Lists the player's Xbox friends who are currently active in Minecraft and lets them try to join
 // one. Reuses the login the player already did via MicrosoftLoginScreen (cached on Client.instance)
@@ -129,36 +133,76 @@ public class FriendsListScreen extends Screen {
 		}, "FunnelMC-Friends-Join").start();
 	}
 
-	// This world can only be reached over NetherNet (WebRTC), which FunnelMC doesn't have a data
-	// channel/ICE/DTLS/SCTP implementation for yet - actually joining isn't possible from this build.
-	// What this DOES verify is the full auth chain leading up to that: Xbox Live -> PlayFab ->
-	// franchise MCToken -> signaling websocket -> real STUN/TURN Credentials from Microsoft's
-	// server. If this succeeds, the auth side of NetherNet is solid and the only remaining work is
-	// the WebRTC transport itself. If it fails, the log will show exactly which step rejected us.
+	// This world can only be reached over NetherNet (WebRTC). The auth chain (Xbox Live -> PlayFab
+	// -> franchise MCToken -> signaling websocket -> real STUN/TURN Credentials) was already proven
+	// working end to end in an earlier build. This drives the actual WebRTC negotiation on top of
+	// it: open a persistent signaling connection, wait for Credentials, then have NetherNetTransport
+	// create the data channels, send our SDP offer, and apply the remote's answer/ICE candidates as
+	// they arrive. Success here means the data channel reaches OPEN - actually routing Bedrock
+	// packets over it (replacing the RakNet/UDP pipeline for this connection) is the next step.
 	private void probeNetherNet(XboxLiveApi.Friend friend, long netherNetId) {
 		new Thread(() -> {
+			SignalingConnection signaling = null;
+			NetherNetTransport transport = null;
 			try {
 				String gameVersion = Client.instance.bedrockCodec.getMinecraftVersion();
 				logger.warn("[NetherNetDiag] Starting probe for {}'s session (netherNetId={}, gameVersion={})", friend.gamertag, netherNetId, gameVersion);
 
 				NetherNetDiscovery.DiscoveryResult discovery = NetherNetDiscovery.discover(gameVersion);
-				logger.warn("[NetherNetDiag] Discovery: authServiceUri={} playFabTitleId={} signalingServiceUri={}",
-						discovery.auth.serviceUri, discovery.auth.playFabTitleId, discovery.signaling.serviceUri);
-
 				String playFabXboxToken = Client.instance.cachedAuth.getXboxTokenForRelyingParty("rp://playfabapi.com/");
 				PlayFabAuth.LoginResult playFabLogin = PlayFabAuth.login(discovery.auth.playFabTitleId, playFabXboxToken);
-				logger.warn("[NetherNetDiag] PlayFab login succeeded, playFabId={}", playFabLogin.playFabId);
-
 				FranchiseAuth.Token mcToken = FranchiseAuth.startSession(discovery.auth.serviceUri, discovery.auth.playFabTitleId, playFabLogin.sessionTicket, gameVersion);
-				logger.warn("[NetherNetDiag] Franchise session/start succeeded, treatments={}", mcToken.treatments);
+				logger.warn("[NetherNetDiag] Auth chain ready, opening signaling connection");
 
-				String credentials = SignalingClient.connectAndWaitForCredentials(discovery.signaling.serviceUri, mcToken.authorizationHeader, 15);
-				logger.warn("[NetherNetDiag] Received signaling Credentials - auth chain works end to end: {}", credentials);
+				String targetNetworkId = Long.toUnsignedString(netherNetId);
+				AtomicReference<NetherNetTransport> transportRef = new AtomicReference<>();
 
-				this.minecraft.execute(() -> this.statusLine = "NetherNet auth chain works! (data channel not implemented yet - see funnelmc.log)");
+				signaling = SignalingConnection.connect(discovery.signaling.serviceUri, mcToken.authorizationHeader, new SignalingConnection.Listener() {
+					@Override
+					public void onCredentials(String credentialsJson) {
+						logger.warn("[NetherNetDiag] Signaling credentials received");
+					}
+
+					@Override
+					public void onSignal(NetherNetSignal signal, String fromNetworkId) {
+						NetherNetTransport t = transportRef.get();
+						if (t != null && targetNetworkId.equals(fromNetworkId)) {
+							t.handleSignal(signal);
+						} else {
+							logger.warn("[NetherNetDiag] Ignoring signal from unexpected/unready source: from={} type={}", fromNetworkId, signal.type);
+						}
+					}
+
+					@Override
+					public void onClosed(int statusCode, String reason) {
+						logger.warn("[NetherNetDiag] Signaling connection closed: {} {}", statusCode, reason);
+					}
+				});
+
+				String credentialsJson = signaling.awaitCredentials(15);
+
+				transport = new NetherNetTransport(signaling, netherNetId, credentialsJson);
+				transportRef.set(transport);
+				transport.connect();
+
+				this.minecraft.execute(() -> this.statusLine = "Negotiating WebRTC connection to " + friend.gamertag + "'s world (see funnelmc.log)...");
+
+				transport.whenDataChannelOpen().get(20, TimeUnit.SECONDS);
+				logger.warn("[NetherNetDiag] Data channel OPEN - WebRTC transport is fully connected!");
+				this.minecraft.execute(() -> this.statusLine = "NetherNet data channel connected! (packet pipeline not wired up yet - see funnelmc.log)");
 			} catch (Exception e) {
 				logger.error("[NetherNetDiag] Probe failed", e);
-				this.minecraft.execute(() -> this.statusLine = "NetherNet probe failed: " + e.getMessage());
+				final SignalingConnection signalingToClose = signaling;
+				final NetherNetTransport transportToClose = transport;
+				this.minecraft.execute(() -> {
+					this.statusLine = "NetherNet probe failed: " + e.getMessage();
+					if (transportToClose != null) {
+						transportToClose.close();
+					}
+					if (signalingToClose != null) {
+						signalingToClose.close();
+					}
+				});
 			}
 		}, "FunnelMC-NetherNet-Probe").start();
 	}
