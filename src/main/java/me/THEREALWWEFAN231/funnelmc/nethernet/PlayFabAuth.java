@@ -6,6 +6,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
 import com.google.gson.JsonObject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import me.THEREALWWEFAN231.funnelmc.FunnelMC;
 
@@ -14,6 +16,8 @@ import me.THEREALWWEFAN231.funnelmc.FunnelMC;
 // what the real Minecraft client sends, since PlayFab's API is picky about clients it doesn't
 // recognize as legitimate SDKs.
 public class PlayFabAuth {
+
+	private static final Logger logger = LogManager.getLogger(PlayFabAuth.class);
 
 	private static final String SDK = "XPlatCppSdk-3.6.190304";
 	private static final String USER_AGENT = "libhttpclient/1.0.0.0";
@@ -51,6 +55,7 @@ public class PlayFabAuth {
 				.build();
 
 		HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+		logger.warn("[NetherNetDiag] PlayFab LoginWithXbox raw response: HTTP {} {}", response.statusCode(), response.body());
 		if (response.statusCode() != 200) {
 			throw new RuntimeException("PlayFab LoginWithXbox failed with HTTP " + response.statusCode() + ": " + response.body());
 		}

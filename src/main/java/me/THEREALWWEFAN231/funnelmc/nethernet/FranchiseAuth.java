@@ -11,6 +11,8 @@ import java.util.UUID;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import me.THEREALWWEFAN231.funnelmc.FunnelMC;
 
@@ -21,6 +23,8 @@ import me.THEREALWWEFAN231.funnelmc.FunnelMC;
 // any signals to/from it - this isn't a hidden per-account flag, just a value the client asks for
 // in this same request body.
 public class FranchiseAuth {
+
+	private static final Logger logger = LogManager.getLogger(FranchiseAuth.class);
 
 	public static class Token {
 		public String authorizationHeader;
@@ -64,12 +68,18 @@ public class FranchiseAuth {
 				.build();
 
 		HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+		logger.warn("[NetherNetDiag] Franchise session/start raw response: HTTP {} {}", response.statusCode(), response.body());
 		if (response.statusCode() != 200) {
 			throw new RuntimeException("Franchise session/start failed with HTTP " + response.statusCode() + ": " + response.body());
 		}
 
+		// The discovery endpoint turned out to wrap its payload as {"result": {...}} rather than the
+		// {"data": {...}} envelope assumed from gophertunnel's generic internal.Result[T] pattern -
+		// try both here too rather than assume this endpoint follows the same convention as that one.
 		JsonObject responseBody = FunnelMC.instance.fileManagement.jsonParser.parse(response.body()).getAsJsonObject();
-		JsonObject data = responseBody.has("data") ? responseBody.getAsJsonObject("data") : null;
+		JsonObject data = responseBody.has("data") ? responseBody.getAsJsonObject("data")
+				: responseBody.has("result") ? responseBody.getAsJsonObject("result")
+				: responseBody;
 		if (data == null || !data.has("authorizationHeader")) {
 			throw new RuntimeException("Franchise session/start response missing authorizationHeader: " + response.body());
 		}
