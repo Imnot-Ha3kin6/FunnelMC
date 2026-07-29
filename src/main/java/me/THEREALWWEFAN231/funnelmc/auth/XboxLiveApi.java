@@ -154,19 +154,35 @@ public class XboxLiveApi {
 		handleBody.addProperty("scid", MINECRAFT_SCID);
 		handleBody.addProperty("type", "activity");
 
-		JsonObject handleResponse = post("https://sessiondirectory.xboxlive.com/handles/query?include=relatedInfo", authorizationHeader, MPSD_CONTRACT_VERSION, handleBody);
+		// Asking for customProperties (not just relatedInfo) makes MPSD embed the session's own
+		// "properties" object directly inside each handle result - the same friends-visibility
+		// grant that lets handles/query find the handle at all is enough to read it that way.
+		// A separate GET straight to .../sessions/{name} enforces a *different*, stricter
+		// permission check (session membership / read-restriction), which is what was producing a
+		// live 403 ("must ... be a member of the session ... if the session ... has a read
+		// restriction") for a session whose owner isn't a mutual Xbox Live "friend" in the
+		// full sense, even though presence/activity-handle visibility still worked. Preferring the
+		// embedded document avoids that second, more restrictive call entirely.
+		JsonObject handleResponse = post("https://sessiondirectory.xboxlive.com/handles/query?include=relatedInfo,customProperties", authorizationHeader, MPSD_CONTRACT_VERSION, handleBody);
 
 		if (!handleResponse.has("results") || handleResponse.getAsJsonArray("results").isEmpty()) {
 			logger.warn("[FriendsDiag] handles/query for xuid={} returned no results - not in an activity handle for scid={}", xuid, MINECRAFT_SCID);
 			return null;
 		}
 
-		JsonObject sessionRef = handleResponse.getAsJsonArray("results").get(0).getAsJsonObject().getAsJsonObject("sessionRef");
+		JsonObject handleResult = handleResponse.getAsJsonArray("results").get(0).getAsJsonObject();
+		JsonObject sessionRef = handleResult.getAsJsonObject("sessionRef");
 		String scid = sessionRef.get("scid").getAsString();
 		String templateName = sessionRef.get("templateName").getAsString();
 		String name = sessionRef.get("name").getAsString();
 
-		JsonObject session = get("https://sessiondirectory.xboxlive.com/serviceconfigs/" + scid + "/sessiontemplates/" + templateName + "/sessions/" + name, authorizationHeader, MPSD_CONTRACT_VERSION);
+		JsonObject session;
+		if (handleResult.has("properties")) {
+			logger.warn("[FriendsDiag] Using session properties embedded in handles/query result for {}/{}/{} (avoiding a separate, more restrictive GET)", scid, templateName, name);
+			session = handleResult;
+		} else {
+			session = get("https://sessiondirectory.xboxlive.com/serviceconfigs/" + scid + "/sessiontemplates/" + templateName + "/sessions/" + name, authorizationHeader, MPSD_CONTRACT_VERSION);
+		}
 
 		if (!session.has("properties")) {
 			logger.warn("[FriendsDiag] MPSD session {}/{}/{} has no 'properties'", scid, templateName, name);
