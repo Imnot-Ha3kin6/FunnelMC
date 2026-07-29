@@ -57,7 +57,11 @@ public class PlayerAuthInputSender {
 		Vector3f delta = this.lastSentPosition == null ? Vector3f.ZERO : position.sub(this.lastSentPosition);
 		this.lastSentPosition = position;
 
-		Input input = FunnelMC.mc.player.getLastSentInput();
+		// getLastSentInput() only updates inside LocalPlayer.sendPosition(), which is gated behind
+		// its own network-send throttling/camera-control checks and lagged behind reality. The live
+		// per-tick key state used to actually drive local movement (aiStep/travel) lives on
+		// mc.player.input.keyPresses instead - read that so held keys show up immediately.
+		Input input = FunnelMC.mc.player.input.keyPresses;
 		float forwardValue = (input.forward() ? 1f : 0f) - (input.backward() ? 1f : 0f);
 		float strafeValue = (input.right() ? 1f : 0f) - (input.left() ? 1f : 0f);
 		Vector2f moveVector = Vector2f.from(strafeValue, forwardValue);
