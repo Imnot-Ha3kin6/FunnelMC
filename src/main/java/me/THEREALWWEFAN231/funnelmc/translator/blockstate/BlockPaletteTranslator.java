@@ -37,6 +37,13 @@ public class BlockPaletteTranslator {
 	public static DefinitionRegistry<BlockDefinition> BLOCK_DEFINITIONS;
 
 	public static void loadMap(NbtList<NbtMap> blockPaletteData) {
+		// Callers are expected to skip this call entirely when a server doesn't provide a live palette
+		// (see ClientBatchHandler), but guard here too since this is also called directly from
+		// BlockStateTranslator.load() - iterating a null NbtList NPEs on NbtList.iterator().
+		if (blockPaletteData == null) {
+			return;
+		}
+
 		// Runtime IDs are just this list's index order - they're only meaningful relative to whichever
 		// palette produced them, so stale entries from a previous loadMap() call (mod startup's bundled
 		// vanilla-only fallback, or a previous connection's server) have to be cleared before

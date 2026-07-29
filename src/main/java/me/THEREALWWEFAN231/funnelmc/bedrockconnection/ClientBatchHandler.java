@@ -83,7 +83,18 @@ public class ClientBatchHandler implements BedrockPacketHandler {
 			// here (synchronously, same as item definitions above and for the same reason - later
 			// packets on this Netty thread can decode before the deferred translate() below runs) makes
 			// every later block lookup match what this server actually sent.
-			BlockPaletteTranslator.loadMap(startGamePacket.getBlockPalette());
+			// Not every server actually sends a live palette here - getBlockPalette() has been observed
+			// to come back null for at least one real-world server. Falling back to the bundled static
+			// palette (already loaded into these same maps at mod startup by BlockStateTranslator.load())
+			// keeps the join sequence working instead of NPEing on NbtList.iterator() and aborting this
+			// whole handlePacket() call before it ever reaches the deferred StartGameTranslator.translate()
+			// below - which previously left mc.level/mc.player/Client.instance.containers null for the
+			// rest of the connection.
+			if (startGamePacket.getBlockPalette() != null && !startGamePacket.getBlockPalette().isEmpty()) {
+				BlockPaletteTranslator.loadMap(startGamePacket.getBlockPalette());
+			} else {
+				this.logger.warn("StartGamePacket carried no block palette - falling back to the bundled static palette");
+			}
 			Client.instance.bedrockSession.getPeer().getCodecHelper().setBlockDefinitions(BlockPaletteTranslator.BLOCK_DEFINITIONS);
 		}
 
