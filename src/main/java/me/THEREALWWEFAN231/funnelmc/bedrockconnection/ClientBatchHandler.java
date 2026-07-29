@@ -24,6 +24,7 @@ import org.cloudburstmc.protocol.common.SimpleDefinitionRegistry;
 
 import me.THEREALWWEFAN231.funnelmc.FunnelMC;
 import me.THEREALWWEFAN231.funnelmc.translator.blockstate.BlockPaletteTranslator;
+import me.THEREALWWEFAN231.funnelmc.translator.blockstate.BlockStateTranslator;
 import net.minecraft.client.Minecraft;
 
 public class ClientBatchHandler implements BedrockPacketHandler {
@@ -90,10 +91,17 @@ public class ClientBatchHandler implements BedrockPacketHandler {
 			// whole handlePacket() call before it ever reaches the deferred StartGameTranslator.translate()
 			// below - which previously left mc.level/mc.player/Client.instance.containers null for the
 			// rest of the connection.
+			// isBlockNetworkIdsHashed() tells us which of the two ID schemes this connection's runtime IDs
+			// actually use (see BlockPaletteTranslator.loadMap's javadoc) - regardless of which palette
+			// list we key it against, this has to be re-derived per connection since it's specific to
+			// this server, not something we can bake into a bundled resource once.
+			boolean networkIdsHashed = startGamePacket.isBlockNetworkIdsHashed();
+			this.logger.warn("StartGamePacket isBlockNetworkIdsHashed={}", networkIdsHashed);
 			if (startGamePacket.getBlockPalette() != null && !startGamePacket.getBlockPalette().isEmpty()) {
-				BlockPaletteTranslator.loadMap(startGamePacket.getBlockPalette());
+				BlockPaletteTranslator.loadMap(startGamePacket.getBlockPalette(), networkIdsHashed);
 			} else {
 				this.logger.warn("StartGamePacket carried no block palette - falling back to the bundled static palette");
+				BlockPaletteTranslator.loadMap(BlockStateTranslator.BUNDLED_BLOCK_PALETTE, networkIdsHashed);
 			}
 			Client.instance.bedrockSession.getPeer().getCodecHelper().setBlockDefinitions(BlockPaletteTranslator.BLOCK_DEFINITIONS);
 		}

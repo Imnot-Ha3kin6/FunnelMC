@@ -20,8 +20,12 @@ import net.minecraft.world.level.block.Blocks;
 import java.util.Map;
 
 /*
- * as of 1.16.100, the block palette is static between all servers, so we can load this once and be over it
- * it uses BlockStateTranslator which loaded blocks.json, from BlockStateTranslator we can match blocks and get their runtime id for a Bedrock server
+ * This used to be true as of 1.16.100 ("the block palette is static between all servers, load it once
+ * and be done"), but modern Bedrock protocol versions can use per-connection hashed block network IDs
+ * (see loadMap's javadoc) - the map built here has to be rebuilt against whichever scheme the current
+ * connection actually uses, not loaded once and forgotten.
+ * It uses BlockStateTranslator, which loaded blocks.json - from BlockStateTranslator we can match blocks
+ * and get their runtime id for a Bedrock server.
  */
 public class BlockPaletteTranslator {
 
@@ -40,7 +44,18 @@ public class BlockPaletteTranslator {
 	// (ItemComponentPacket, CreativeContentPacket, CraftingDataPacket, ...).
 	public static DefinitionRegistry<BlockDefinition> BLOCK_DEFINITIONS;
 
-	public static void loadMap(NbtList<NbtMap> blockPaletteData) {
+	// Modern Bedrock can identify blocks on the wire two different ways, signalled per-connection by
+	// StartGamePacket.isBlockNetworkIdsHashed(): the old scheme where a block's "runtime ID" is just its
+	// index into this palette list (meaningless without both sides agreeing on the exact same list
+	// order), or a newer scheme where it's a persistent hash of the block's identifier+states that both
+	// sides compute independently - no shared ordering needed at all. We were always treating IDs as
+	// list-index, so against a hashed-ID server every chunk lookup compared a ~32-bit hash against small
+	// sequential keys: almost always a silent miss (block position left as air - the free-fall/rubber-
+	// banding through "solid" ground), occasionally a coincidental collision onto a wrong-but-plausible
+	// block (a wall or sign under your feet). The palette data already carries the correct hash in each
+	// entry's "network_id" field (that's precisely what it's for), so use that as the key instead of the
+	// loop counter when this connection says IDs are hashed.
+	public static void loadMap(NbtList<NbtMap> blockPaletteData, boolean networkIdsHashed) {
 		// Callers are expected to skip this call entirely when a server doesn't provide a live palette
 		// (see ClientBatchHandler), but guard here too since this is also called directly from
 		// BlockStateTranslator.load() - iterating a null NbtList NPEs on NbtList.iterator().
@@ -48,36 +63,36 @@ public class BlockPaletteTranslator {
 			return;
 		}
 
-		// Runtime IDs are just this list's index order - they're only meaningful relative to whichever
-		// palette produced them, so stale entries from a previous loadMap() call (mod startup's bundled
-		// vanilla-only fallback, or a previous connection's server) have to be cleared before
-		// repopulating, otherwise a reconnect to a different server leaves old (now wrong) mappings
-		// mixed in with the new ones.
+		// Stale entries from a previous loadMap() call (mod startup's bundled vanilla-only fallback, or
+		// a previous connection's server) have to be cleared before repopulating, otherwise a reconnect
+		// to a different server (or a different ID scheme) leaves old, now-wrong mappings mixed in.
 		BEDROCK_BLOCK_STATE_TO_RUNTIME_ID.clear();
 		RUNTIME_ID_TO_BLOCK_STATE.clear();
 		BLOCK_STATE_TO_RUNTIME_ID.clear();
 
-		int runtimeId = 0;
+		int sequentialId = 0;
 		SimpleDefinitionRegistry.Builder<BlockDefinition> blockDefinitionsBuilder = SimpleDefinitionRegistry.builder();
 		for (NbtMap nbtMap : blockPaletteData) {
+			int id = networkIdsHashed ? nbtMap.getInt("network_id", sequentialId) : sequentialId;
+
 			BedrockBlockState bedrockBlockState = bedrockStateFromNBTMap(nbtMap);
-			BEDROCK_BLOCK_STATE_TO_RUNTIME_ID.put(bedrockBlockState.toString(), runtimeId);
-			blockDefinitionsBuilder.add(new SimpleBlockDefinition(bedrockBlockState.identifier, runtimeId, nbtMap.getCompound("states")));
+			BEDROCK_BLOCK_STATE_TO_RUNTIME_ID.put(bedrockBlockState.toString(), id);
+			blockDefinitionsBuilder.add(new SimpleBlockDefinition(bedrockBlockState.identifier, id, nbtMap.getCompound("states")));
 
 			BlockState blockState = BlockStateTranslator.BEDROCK_BLOCK_STATE_STRING_TO_JAVA_BLOCK_STATE.get(bedrockBlockState.toString());
 			if (blockState != null) {
-				RUNTIME_ID_TO_BLOCK_STATE.put(runtimeId, blockState);
-				BLOCK_STATE_TO_RUNTIME_ID.put(blockState, runtimeId);
+				RUNTIME_ID_TO_BLOCK_STATE.put(id, blockState);
+				BLOCK_STATE_TO_RUNTIME_ID.put(blockState, id);
 				if (bedrockBlockState.identifier.equals("minecraft:air")) {
-					AIR_BEDROCK_BLOCK_ID = runtimeId;
+					AIR_BEDROCK_BLOCK_ID = id;
 				} else if (bedrockBlockState.identifier.equals("minecraft:water")) {
-					WATER_BEDROCK_BLOCK_ID = runtimeId;
+					WATER_BEDROCK_BLOCK_ID = id;
 				}
 			} else {
-				RUNTIME_ID_TO_BLOCK_STATE.put(runtimeId, resolveByDefaultNameMatch(bedrockBlockState));
+				RUNTIME_ID_TO_BLOCK_STATE.put(id, resolveByDefaultNameMatch(bedrockBlockState));
 			}
 
-			runtimeId++;
+			sequentialId++;
 		}
 
 		BLOCK_DEFINITIONS = blockDefinitionsBuilder.build();
